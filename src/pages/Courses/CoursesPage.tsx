@@ -20,7 +20,7 @@ interface CourseCardProps {
 
 const CourseCard = ({ course, onClick, onDelete }: CourseCardProps) => (
     <div
-        className="bg-base-100 border border-base-200 rounded-xl p-5 cursor-pointer hover:border-base-300 transition-colors"
+        className="bg-white border border-gray-100 shadow-sm rounded-2xl p-5 cursor-pointer hover:shadow-md transition-all"
         onClick={() => onClick(course.id)}
     >
         <div className="flex justify-between items-start mb-3">
@@ -219,12 +219,6 @@ export default function CoursesPage() {
                         {courses.filter((c) => !c.isDeleted).length} cours
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="btn btn-neutral btn-sm"
-                >
-                    + Ajouter un cours
-                </button>
             </div>
 
             {/* Recherche */}
@@ -249,12 +243,9 @@ export default function CoursesPage() {
                         {search ? 'Aucun cours trouvé' : 'Aucun cours pour le moment'}
                     </div>
                     {!search && (
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="btn btn-neutral btn-sm mt-4"
-                        >
-                            Ajouter mon premier cours
-                        </button>
+                        <div className="text-xs text-blue-500 font-medium mt-4">
+                            Appuyez sur le bouton + pour commencer
+                        </div>
                     )}
                 </div>
             ) : (
@@ -269,18 +260,16 @@ export default function CoursesPage() {
                             }}
                         />
                     ))}
-                    {/* Carte ajout */}
-                    <div
-                        onClick={() => setShowModal(true)}
-                        className="border-2 border-dashed border-base-300 rounded-xl flex items-center justify-center cursor-pointer hover:border-base-content/30 transition-colors min-h-36"
-                    >
-                        <div className="text-center text-base-content/30">
-                            <div className="text-2xl mb-1">+</div>
-                            <div className="text-xs">Ajouter un cours</div>
-                        </div>
-                    </div>
                 </div>
             )}
+
+            {/* Floating Action Button (FAB) */}
+            <button
+                onClick={() => setShowModal(true)}
+                className="fixed bottom-6 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-xl flex items-center justify-center text-3xl font-light transition-transform hover:scale-105 z-50 focus:outline-none"
+            >
+                +
+            </button>
 
             {/* Modal */}
             {showModal && (

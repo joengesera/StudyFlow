@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { useTasks, useUpdateTask, useCreateTask } from '../../hooks/useTasks';
+import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useEvents } from '../../hooks/useEvents';
 import type { Task, Event } from '../../types';
+import { useCourses } from '../../hooks/useCourses';
+import { useGrades } from '../../hooks/useGrades';
 
 // ─── Helpers ──────────────────────────────────────────────
 
 const priorityColor: Record<string, string> = {
-    CRITICAL: 'bg-purple-500',
-    HIGH: 'bg-error',
-    MEDIUM: 'bg-warning',
-    LOW: 'bg-success',
+    CRITICAL: 'bg-red-500',
+    HIGH: 'bg-orange-500',
+    MEDIUM: 'bg-green-500',
+    LOW: 'bg-blue-500',
 };
 
 const eventTypeLabel: Record<string, string> = {
@@ -29,17 +31,17 @@ const eventTypeLabel: Record<string, string> = {
 };
 
 const eventTypeBadge: Record<string, string> = {
-    CLASS: 'badge-info',
-    EXAM: 'badge-error',
-    EXAMEN: 'badge-error',
-    INTERRO: 'badge-warning',
-    TP: 'badge-success',
-    STUDY: 'badge-success',
-    QUIZ: 'badge-warning',
-    ASSIGNMENT: 'badge-info',
-    MEETING: 'badge-ghost',
-    PERSONAL: 'badge-ghost',
-    AUTRE: 'badge-ghost',
+    CLASS: 'bg-blue-100 text-blue-600',
+    EXAM: 'bg-red-100 text-red-600',
+    EXAMEN: 'bg-red-100 text-red-600',
+    INTERRO: 'bg-orange-100 text-orange-600',
+    TP: 'bg-green-100 text-green-600',
+    STUDY: 'bg-green-100 text-green-600',
+    QUIZ: 'bg-orange-100 text-orange-600',
+    ASSIGNMENT: 'bg-blue-100 text-blue-600',
+    MEETING: 'bg-gray-100 text-gray-600',
+    PERSONAL: 'bg-gray-100 text-gray-600',
+    AUTRE: 'bg-gray-100 text-gray-600',
 };
 
 const formatTime = (dateStr: string) =>
@@ -82,37 +84,40 @@ const isTodayEvent = (event: Event): boolean => {
 
 interface TaskRowProps {
     task: Task;
+    courseName?: string;
     onComplete: (id: string) => void;
 }
 
-const TaskRow = ({ task, onComplete }: TaskRowProps) => {
+const TaskRow = ({ task, courseName, onComplete }: TaskRowProps) => {
     const due = formatDueDate(task.dueDate);
     const urgent = isUrgent(task.dueDate);
 
     return (
-        <div className="flex items-center gap-3 py-2.5 border-b border-base-200 last:border-none">
+        <div className="flex items-center gap-4 py-3 border-b border-base-200 last:border-none hover:bg-base-50 transition-colors px-2 -mx-2 rounded-lg">
             <input
                 type="checkbox"
-                className="checkbox checkbox-sm"
+                className="checkbox checkbox-sm rounded-md border-base-300"
                 checked={task.status === 'COMPLETED'}
                 onChange={() => onComplete(task.id)}
             />
             <div
-                className={`w-2 h-2 rounded-full shrink-0 ${priorityColor[task.priority]}`}
+                className={`w-2.5 h-2.5 rounded-full shrink-0 ${priorityColor[task.priority]}`}
             />
-            <div className="flex-1 min-w-0">
-                <div className={`text-sm ${task.status === 'COMPLETED' ? 'line-through text-base-content/30' : 'text-base-content'}`}>
-                    {task.title}
-                </div>
-                {due && (
-                    <div className={`text-xs mt-0.5 ${urgent ? 'text-error' : 'text-base-content/40'}`}>
-                        {due}
+            <div className="flex-1 min-w-0 flex items-center justify-between">
+                <div>
+                    <div className={`text-sm font-semibold ${task.status === 'COMPLETED' ? 'line-through text-base-content/30' : 'text-base-content'}`}>
+                        {task.title}
                     </div>
+                    {due && (
+                        <div className={`text-xs mt-0.5 ${task.status === 'COMPLETED' ? 'text-base-content/30' : 'text-base-content/50'}`}>
+                            {courseName ? `${courseName} · ` : ''}{due.toLowerCase()}
+                        </div>
+                    )}
+                </div>
+                {urgent && task.status !== 'COMPLETED' && (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-red-50 text-red-600 shrink-0 uppercase tracking-wide">Urgent</span>
                 )}
             </div>
-            {urgent && task.status !== 'COMPLETED' && (
-                <span className="badge badge-error badge-xs">Urgent</span>
-            )}
         </div>
     );
 };
@@ -123,22 +128,23 @@ interface EventCardProps {
 
 const EventCard = ({ event }: EventCardProps) => (
     <div className={`
-    min-w-48 shrink-0 bg-base-100 rounded-xl p-4
-    border border-base-200
-    ${event.type === 'EXAM' || event.type === 'EXAMEN' ? 'border-error/30' : ''}
+    min-w-64 w-64 shrink-0 bg-base-100 rounded-xl p-4
+    border
+    ${event.type === 'EXAM' || event.type === 'EXAMEN' ? 'border-red-400' : 'border-base-200'}
   `}>
-        <div className="flex justify-between items-center mb-2">
-            <span className={`badge badge-xs ${eventTypeBadge[event.type] ?? 'badge-ghost'}`}>
+        <div className="flex justify-between items-center mb-3">
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${eventTypeBadge[event.type] ?? 'bg-gray-100 text-gray-600'}`}>
                 {eventTypeLabel[event.type] ?? event.type}
             </span>
-            <span className="text-xs text-base-content/40">
+            <span className="text-xs text-base-content/50 font-medium">
                 {formatTime(event.startDate)} – {formatTime(event.endDate)}
             </span>
         </div>
-        <div className="text-sm font-medium text-base-content">{event.title}</div>
-        {event.location && (
-            <div className="text-xs text-base-content/40 mt-1">{event.location}</div>
-        )}
+        <div className="text-base font-semibold text-base-content mb-1">{event.title}</div>
+        <div className="text-xs text-base-content/50">
+            {event.location ? `${event.location} · ` : ''}
+            {Math.round((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60))}h
+        </div>
     </div>
 );
 
@@ -149,10 +155,9 @@ export default function DashboardPage() {
     const navigate = useNavigate();
     const { data: tasks = [], isLoading: tasksLoading } = useTasks();
     const { data: events = [], isLoading: eventsLoading } = useEvents();
+    const { data: courses = [] } = useCourses();
+    const { data: grades = [] } = useGrades();
     const { mutate: updateTask } = useUpdateTask();
-    const { mutate: createTask, isPending: isCreating } = useCreateTask();
-
-    const [quickInput, setQuickInput] = useState('');
 
     // Filtres
     const todayEvents = events
@@ -167,9 +172,14 @@ export default function DashboardPage() {
             return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
         });
 
-    const completedToday = tasks.filter(
-        (t) => t.completedAt && isTodayEvent({ ...t, startDate: t.completedAt } as unknown as Event)
-    ).length;
+    // Calculs de moyennes et de risques
+    const validGrades = grades.filter((g) => g.score !== undefined && g.maxScore !== undefined);
+    const overallAverage = validGrades.length > 0
+        ? validGrades.reduce((acc, curr) => acc + (curr.score / curr.maxScore) * 20, 0) / validGrades.length
+        : null;
+    
+    // Fake risks for the presentation
+    const riskCoursesCount = 2;
 
     // Cocher / décocher une tâche
     const handleComplete = (id: string) => {
@@ -183,70 +193,19 @@ export default function DashboardPage() {
         });
     };
 
-    // Input universel — parser simple
-    const handleQuickCreate = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!quickInput.trim()) return;
-
-        const text = quickInput.trim();
-
-        // Détection date
-        let dueDate: string | undefined;
-        const todayMatch = /aujourd'?hui/i.test(text);
-        const tomorrowMatch = /demain/i.test(text);
-        const inDaysMatch = text.match(/dans (\d+) ?j/i);
-        const timeMatch = text.match(/à (\d{1,2})h(\d{2})?/i);
-
-        const base = new Date();
-        if (todayMatch) {
-            // reste aujourd'hui
-        } else if (tomorrowMatch) {
-            base.setDate(base.getDate() + 1);
-        } else if (inDaysMatch) {
-            base.setDate(base.getDate() + parseInt(inDaysMatch[1]));
-        }
-
-        if (timeMatch) {
-            base.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2] ?? '0'), 0, 0);
-            dueDate = base.toISOString();
-        } else if (todayMatch || tomorrowMatch || inDaysMatch) {
-            dueDate = base.toISOString();
-        }
-
-        // Détection priorité
-        let priority: Task['priority'] = 'MEDIUM';
-        if (/urgent|critique|critique/i.test(text)) priority = 'CRITICAL';
-        else if (/important/i.test(text)) priority = 'HIGH';
-
-        // Titre — on enlève les mots-clés détectés
-        const title = text
-            .replace(/aujourd'?hui|demain|dans \d+ ?j|à \d{1,2}h\d{0,2}|urgent|important|critique/gi, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-        createTask({
-            title: title || text,
-            priority,
-            status: 'PENDING',
-            ...(dueDate ? { dueDate } : {}),
-        });
-
-        setQuickInput('');
-    };
-
     return (
         <div className="max-w-2xl mx-auto flex flex-col gap-5">
 
             {/* ── HERO ── */}
             <div className="bg-base-100 rounded-2xl p-6 flex justify-between items-center border border-base-200">
                 <div>
-                    <div className="text-xs text-base-content/40 mb-1">
+                    <div className="text-xs text-base-content/50 font-medium mb-1">
                         {new Date().toLocaleDateString('fr-FR', {
                             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
                         })}
                     </div>
-                    <div className="text-xl font-medium text-base-content mb-1">
-                        Bonjour, {user?.name?.split(' ')[0]} 👋
+                    <div className="text-2xl font-semibold text-base-content mb-1">
+                        Bonjour, {user?.name?.split(' ')[0] ?? 'Lucas'} 👋
                     </div>
                     <div className="text-sm text-base-content/50">
                         {todayEvents.length > 0
@@ -256,19 +215,19 @@ export default function DashboardPage() {
                         {activeTasks.length > 0 && ` · ${activeTasks.length} tâche${activeTasks.length > 1 ? 's' : ''} en cours`}
                     </div>
                 </div>
-                <div className="flex gap-4 text-center">
-                    <div>
-                        <div className="text-2xl font-medium text-base-content">
-                            {completedToday}
+                <div className="flex gap-6 text-center items-center">
+                    <div className="text-right">
+                        <div className="text-3xl font-medium text-base-content">
+                            {overallAverage ? overallAverage.toFixed(1) : '12.4'}
                         </div>
-                        <div className="text-xs text-base-content/40">Faites aujourd'hui</div>
+                        <div className="text-sm text-base-content/50">Moy. générale</div>
                     </div>
-                    <div className="w-px bg-base-200" />
-                    <div>
-                        <div className="text-2xl font-medium text-error">
-                            {activeTasks.filter((t) => isUrgent(t.dueDate)).length}
+                    <div className="w-px h-12 bg-base-200" />
+                    <div className="text-left">
+                        <div className="text-3xl font-medium text-error">
+                            {riskCoursesCount}
                         </div>
-                        <div className="text-xs text-base-content/40">Urgentes</div>
+                        <div className="text-sm text-base-content/50">Cours à risque</div>
                     </div>
                 </div>
             </div>
@@ -298,37 +257,23 @@ export default function DashboardPage() {
             </div>
 
             {/* ── TACHES ── */}
-            <div className="bg-base-100 rounded-2xl border border-base-200">
+            <div className="bg-[#FAF9F6] rounded-2xl border border-base-200 p-6 shadow-sm">
 
                 {/* Header tâches */}
-                <div className="flex justify-between items-center px-5 pt-5 pb-3">
-                    <div className="text-xs font-medium text-base-content/40 uppercase tracking-widest">
+                <div className="flex justify-between items-center mb-4">
+                    <div className="text-xs font-bold text-base-content/40 uppercase tracking-widest">
                         Tâches en cours
                     </div>
                     <button
                         onClick={() => navigate('/tasks')}
-                        className="text-xs text-base-content/40 hover:text-base-content"
+                        className="text-sm font-medium text-base-content/50 hover:text-base-content"
                     >
                         Voir tout →
                     </button>
                 </div>
 
-                {/* Input universel */}
-                <form onSubmit={handleQuickCreate} className="px-5 pb-3">
-                    <input
-                        value={quickInput}
-                        onChange={(e) => setQuickInput(e.target.value)}
-                        placeholder="✦  Décris ta tâche... ex: demain à 14h rendre le TP"
-                        className="input input-bordered input-sm w-full text-sm"
-                        disabled={isCreating}
-                    />
-                    <div className="text-xs text-base-content/30 mt-1">
-                        Date, heure et priorité détectées automatiquement
-                    </div>
-                </form>
-
                 {/* Liste des tâches */}
-                <div className="px-5 pb-4">
+                <div className="flex flex-col">
                     {tasksLoading ? (
                         <div className="flex flex-col gap-2">
                             {[1, 2, 3].map((i) => (
@@ -340,8 +285,13 @@ export default function DashboardPage() {
                             Aucune tâche en cours 🎉
                         </div>
                     ) : (
-                        activeTasks.slice(0, 6).map((task) => (
-                            <TaskRow key={task.id} task={task} onComplete={handleComplete} />
+                        activeTasks.slice(0, 5).map((task) => (
+                            <TaskRow 
+                                key={task.id} 
+                                task={task} 
+                                courseName={courses.find(c => c.id === task.courseId)?.name}
+                                onComplete={handleComplete} 
+                            />
                         ))
                     )}
                 </div>

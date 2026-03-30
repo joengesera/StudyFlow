@@ -116,3 +116,8 @@ export interface RiskAnalysis {
         pressure: number;
     };
 }
+
+export interface Token {
+    accessToken:string,
+    refreshToken:string
+}

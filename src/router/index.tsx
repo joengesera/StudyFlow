@@ -2,17 +2,20 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRouter';
 import { lazy, Suspense } from 'react';
 
+
 const AppLayout = lazy(() => import('../layouts/AppLayout'));
 const LoginPage = lazy(() => import('../pages/Auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/Auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/Auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../pages/Auth/ResetPassword'));
 const DashboardPage = lazy(() => import('../pages/Dashboard/DashboardPage'));
-// const CoursesPage = lazy(() => import('../pages/Courses/CoursesPage'));
-// const CourseDetailPage = lazy(() => import('../pages/Courses/CourseDetailPage'));
-// const AgendaPage = lazy(() => import('../pages/Agenda/AgendaPage'));
-// const TasksPage = lazy(() => import('../pages/Tasks/TasksPage'));
-// const RiskPage = lazy(() => import('../pages/Risk/RiskPage'));
-// const ProfilePage = lazy(() => import('../pages/Profile/ProfilePage'));
+const CoursesPage = lazy(() => import('../pages/Courses/CoursesPage'));
+const CourseDetailPage = lazy(() => import('../pages/Courses/CoursesDetailPage'));
+const AgendaPage = lazy(() => import('../pages/Agenda/AgendaPage'));
+const TasksPage = lazy(() => import('../pages/Tasks/TaskPage'));
+const WorksPage = lazy(() => import('../pages/Works/WorksPage'));
+const RiskPage = lazy(() => import('../pages/Risk/RiskPage'));
+const ProfilePage = lazy(() => import('../pages/Profile/ProfilePage'));
 
 const PageLoader = () => (
     <div style={{
@@ -40,6 +43,11 @@ export const router = createBrowserRouter([
         path: '/forgot-password',
         element: <Suspense fallback={<PageLoader />}><ForgotPasswordPage /></Suspense>,
     },
+    {
+        path: '/reset-password',
+        element: <Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>,
+    },
+   
 
     // ─── Routes protégées ──────────────────────────────────
     {
@@ -55,30 +63,34 @@ export const router = createBrowserRouter([
                         path: '/dashboard',
                         element: <Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>,
                     },
-                    // {
-                    //     path: '/courses',
-                    //     element: <Suspense fallback={<PageLoader />}><CoursesPage /></Suspense>,
-                    // },
-                    // {
-                    //     path: '/courses/:id',
-                    //     element: <Suspense fallback={<PageLoader />}><CourseDetailPage /></Suspense>,
-                    // },
-                    // {
-                    //     path: '/agenda',
-                    //     element: <Suspense fallback={<PageLoader />}><AgendaPage /></Suspense>,
-                    // },
-                    // {
-                    //     path: '/tasks',
-                    //     element: <Suspense fallback={<PageLoader />}><TasksPage /></Suspense>,
-                    // },
-                    // {
-                    //     path: '/risk',
-                    //     element: <Suspense fallback={<PageLoader />}><RiskPage /></Suspense>,
-                    // },
-                    // {
-                    //     path: '/profile',
-                    //     element: <Suspense fallback={<PageLoader />}><ProfilePage /></Suspense>,
-                    // },
+                    {
+                        path: '/courses',
+                        element: <Suspense fallback={<PageLoader />}><CoursesPage /></Suspense>,
+                    },
+                    {
+                        path: '/courses/:id',
+                        element: <Suspense fallback={<PageLoader />}><CourseDetailPage /></Suspense>,
+                    },
+                    {
+                        path: '/agenda',
+                        element: <Suspense fallback={<PageLoader />}><AgendaPage /></Suspense>,
+                    },
+                    {
+                        path: '/tasks',
+                        element: <Suspense fallback={<PageLoader />}><TasksPage /></Suspense>,
+                    },
+                    {
+                        path: '/works',
+                        element: <Suspense fallback={<PageLoader />}><WorksPage /></Suspense>,
+                    },
+                    {
+                        path: '/risk',
+                        element: <Suspense fallback={<PageLoader />}><RiskPage /></Suspense>,
+                    },
+                    {
+                        path: '/profile',
+                        element: <Suspense fallback={<PageLoader />}><ProfilePage /></Suspense>,
+                    },
                 ],
             },
         ],

@@ -68,20 +68,20 @@ const TaskCard = ({ task, onSelect, isSelected }: TaskCardProps) => {
             {...attributes}
             {...listeners}
             onClick={() => onSelect(task)}
-            className={`
-        bg-base-100 rounded-xl p-3 border cursor-grab active:cursor-grabbing
-        transition-colors select-none
-        ${isSelected ? 'border-base-content/50' : 'border-base-200 hover:border-base-300'}
+        className={`
+        bg-white rounded-2xl p-4 shadow-sm mb-3 cursor-grab active:cursor-grabbing flex gap-3
+        transition-all duration-300 hover:shadow-md select-none
+        ${isSelected ? 'ring-2 ring-blue-500' : ''}
       `}
         >
-            <div className="flex items-start gap-2 mb-2">
-                <div className={`w-2 h-2 rounded-full shrink-0 mt-1 ${priorityColor[task.priority]}`} />
-                <div className={`text-sm flex-1 ${task.status === 'COMPLETED' ? 'line-through text-base-content/30' : 'text-base-content'}`}>
+            <div className={`w-3 h-3 rounded-full shrink-0 mt-1.5 ${priorityColor[task.priority]}`} />
+            <div className="flex-1">
+                <div className={`text-[15px] font-medium mb-1 ${task.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                     {task.title}
                 </div>
             </div>
             {task.dueDate && (
-                <div className="text-xs text-base-content/40 pl-4">
+                <div className="text-xs text-gray-500 font-medium">
                     {new Date(task.dueDate).toLocaleDateString('fr-FR')}
                 </div>
             )}
@@ -109,18 +109,16 @@ const KanbanColumn = ({
     tasks,
     onSelect,
     selectedTaskId,
-    onAddTask,
 }: KanbanColumnProps) => {
     const { setNodeRef } = useDroppable({ id: column.key });
 
     return (
-        <div className="flex flex-col bg-base-200 rounded-xl p-3 min-w-56 flex-1">
+        <div className="flex flex-col flex-1 min-w-[280px]">
 
             {/* Header colonne */}
-            <div className="flex items-center gap-2 mb-3">
-                <div className={`w-2 h-2 rounded-full ${column.color}`} />
-                <span className="text-xs font-medium text-base-content/60">{column.label}</span>
-                <span className="ml-auto text-xs bg-base-300 px-2 py-0.5 rounded-full text-base-content/40">
+            <div className="flex items-center gap-2 mb-4 px-2">
+                <span className="text-sm font-semibold text-blue-600 tracking-wide">{column.label}</span>
+                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full ml-auto font-medium">
                     {tasks.length}
                 </span>
             </div>
@@ -141,14 +139,6 @@ const KanbanColumn = ({
                     ))}
                 </SortableContext>
             </div>
-
-            {/* Bouton ajout */}
-            <button
-                onClick={() => onAddTask(column.key)}
-                className="mt-2 w-full text-xs text-base-content/30 hover:text-base-content py-2 border-2 border-dashed border-base-300 hover:border-base-content/20 rounded-lg transition-colors"
-            >
-                + Ajouter
-            </button>
 
         </div>
     );
@@ -175,7 +165,7 @@ const PomodoroWidget = ({ taskId, taskTitle }: PomodoroWidgetProps) => {
     } = usePomodoro(taskId);
 
     return (
-        <div className="bg-base-100 rounded-2xl border border-base-200 p-5 flex flex-col items-center gap-4">
+        <div className="bg-base-100/70 backdrop-blur-md rounded-2xl border border-base-200 p-5 flex flex-col items-center gap-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1">
 
             {/* Titre */}
             <div className="text-center">
@@ -482,7 +472,7 @@ export default function TasksPage() {
                             value={quickInput}
                             onChange={(e) => setQuickInput(e.target.value)}
                             placeholder="✦  Décris ta tâche... ex: demain à 14h rendre le TP"
-                            className="input input-bordered input-sm w-full"
+                            className="input input-bordered input-sm w-full transition-all duration-300 focus:shadow-md focus:border-primary"
                             disabled={isCreating}
                         />
                     </form>
@@ -546,6 +536,14 @@ export default function TasksPage() {
                     }
                 />
             )}
+
+            {/* Floating Action Button (FAB) */}
+            <button
+                onClick={() => createTask({ title: 'Nouvelle tâche', status: 'PENDING', priority: 'MEDIUM' })}
+                className="fixed bottom-6 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-xl flex items-center justify-center text-3xl font-light transition-transform hover:scale-105 z-50 focus:outline-none"
+            >
+                +
+            </button>
 
         </div>
     );

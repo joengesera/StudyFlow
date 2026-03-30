@@ -13,3 +13,4 @@ export const ProtectedRoute = () => {
     // Outlet = la page enfant définie dans le router
     return <Outlet />;
 }; 
+
