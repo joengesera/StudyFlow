@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useSyncStore } from './syncStore';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -8,6 +9,8 @@ export interface User {
     email: string;
     name: string;
     role: 'STUDENT' | 'PROFESSOR';
+    language?: string;
+    timezone?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -42,11 +45,17 @@ export const useAuthStore = create<AuthState>()(
                 isAuthenticated: true,
             }),
 
-            logout: () => set({
-                user: null,
-                tokens: null,
-                isAuthenticated: false,
-            }),
+            logout: () => {
+                // On s'assure que le cache local offline est vidé
+                useSyncStore.getState().clearCache();
+                useSyncStore.getState().clearQueue();
+                
+                set({
+                    user: null,
+                    tokens: null,
+                    isAuthenticated: false,
+                });
+            },
 
             updateUser: (partial) => set((state) => ({
                 user: state.user ? { ...state.user, ...partial } : null,

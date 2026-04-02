@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesAPI } from '../api/course.api';
+import { useSyncStore } from '../stores/syncStore';
 import type { Course } from '../types';
 
 export const courseKeys = {
@@ -8,9 +9,19 @@ export const courseKeys = {
 };
 
 export const useCourses = () => {
+    const setCacheCourses = useSyncStore((s) => s.setCacheCourses);
+    const cachedCourses = useSyncStore((s) => s.cache.courses);
+
     return useQuery({
         queryKey: courseKeys.all,
-        queryFn: coursesAPI.getAll,
+        queryFn: async () => {
+            const courses = await coursesAPI.getAll();
+            // Persiste dans le browser store pour usage offline
+            setCacheCourses(courses);
+            return courses;
+        },
+        initialData: cachedCourses.length > 0 ? cachedCourses : undefined,
+        staleTime: 30_000,
     });
 };
 

@@ -1,31 +1,16 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore.ts';
+import { useSyncStore } from '../stores/syncStore.ts';
 
 export const useAuth = () => {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { login, logout, user, isAuthenticated } = useAuthStore();
 
     // ─── Login ────────────────────────────────────────────────
-    // const loginMutation = useMutation({
-    //     mutationFn: authAPI.login,
-    //     onSuccess: (data) => {
-    //         // On range user + tokens dans le store
-    //         login(data.user, data.tokens);
-    //         // On redirige vers le dashboard
-    //         navigate('/dashboard');
-    //     },
-    // });
-
-    // ─── Register ─────────────────────────────────────────────
-    // const registerMutation = useMutation({
-    //     mutationFn: authAPI.register,
-    //     onSuccess: (data) => {
-    //         login(data.user, data.tokens);
-    //         navigate('/dashboard');
-    //     },
-    // });
+    // ... (skipped for brevity but assuming it stays same)
 
     // ─── Logout ───────────────────────────────────────────────
     const logoutMutation = useMutation({
@@ -34,7 +19,18 @@ export const useAuth = () => {
             return authAPI.logout(tokens?.refreshToken ?? '');
         },
         onSettled: () => {
-            logout ();
+            // 1. Vider le store d'authentification
+            logout();
+
+            // 2. Vider le store de synchronisation (cache local offline)
+            const syncStore = useSyncStore.getState();
+            syncStore.clearCache();
+            syncStore.clearQueue();
+
+            // 3. Vider le cache de React Query
+            queryClient.clear();
+
+            // 4. Redirection vers login
             navigate('/login');
         }
     });

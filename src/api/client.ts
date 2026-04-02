@@ -56,7 +56,14 @@ apiClient.interceptors.response.use(
   async (error) => {
     // ─── OFFLINE INTERCEPTOR ───
     if (!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK') || !navigator.onLine) {
-      const config = error.config;
+      const config = error.config as any;
+
+      // Si c'est une requête de synchronisation (background), on rejette l'erreur directement
+      // pour éviter de l'ajouter à nouveau dans la file.
+      if (config?._isSync) {
+        return Promise.reject(error);
+      }
+
       if (config && config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
         
         // On push la mutation en file d'attente

@@ -16,6 +16,14 @@ import {
     parseISO,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import {
+    Clock,
+    MapPin,
+    FileText,
+    ChevronLeft,
+    ChevronRight,
+    Plus,
+} from 'lucide-react';
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '../../hooks/useEvents';
 import { useCourses } from '../../hooks/useCourses';
 import type { Event } from '../../types';
@@ -23,17 +31,17 @@ import type { Event } from '../../types';
 // ─── Helpers ──────────────────────────────────────────────
 
 const eventTypeBadge: Record<string, string> = {
-    CLASS: 'badge-info',
-    EXAM: 'badge-error',
-    EXAMEN: 'badge-error',
-    INTERRO: 'badge-warning',
-    TP: 'badge-success',
-    STUDY: 'badge-success',
-    QUIZ: 'badge-warning',
-    ASSIGNMENT: 'badge-info',
-    MEETING: 'badge-ghost',
-    PERSONAL: 'badge-ghost',
-    AUTRE: 'badge-ghost',
+    CLASS: 'bg-[#EFF6FF] text-[#3B82F6]', // bleu
+    EXAM: 'bg-[#FEF2F2] text-[#EF4444]',  // rouge
+    EXAMEN: 'bg-[#FEF2F2] text-[#EF4444]',
+    INTERRO: 'bg-[#FFF7ED] text-[#F59E0B]', // orange
+    TP: 'bg-[#F0FDF4] text-[#10B981]',   // vert
+    STUDY: 'bg-[#F0FDF4] text-[#10B981]',
+    QUIZ: 'bg-[#FFF7ED] text-[#F59E0B]',
+    ASSIGNMENT: 'bg-[#EFF6FF] text-[#3B82F6]',
+    MEETING: 'bg-[#F3F4F6] text-[#1A1A1A]', // gris
+    PERSONAL: 'bg-[#F3F4F6] text-[#1A1A1A]',
+    AUTRE: 'bg-[#F3F4F6] text-[#1A1A1A]',
 };
 
 const eventTypeLabel: Record<string, string> = {
@@ -42,7 +50,7 @@ const eventTypeLabel: Record<string, string> = {
     EXAMEN: 'Examen',
     INTERRO: 'Interro',
     TP: 'TP',
-    STUDY: 'Révision',
+    STUDY: 'Étude',
     QUIZ: 'Quiz',
     ASSIGNMENT: 'Devoir',
     MEETING: 'Réunion',
@@ -90,142 +98,139 @@ const EventModal = ({
     };
 
     return (
-        <dialog open className="modal modal-open">
-            <div className="modal-box max-w-md">
-
+        <div className="fixed inset-0 z-[100] flex justify-center items-center p-4 sm:p-6 bg-black/20 backdrop-blur-[2px]">
+            <div className="bg-white w-full max-w-[480px] max-h-[90vh] overflow-y-auto rounded-[24px] p-8 shadow-2xl relative scrollbar-hide">
                 {/* Header */}
-                <div className="flex items-start gap-3 mb-5">
+                <div className="flex items-start gap-3 mb-6">
                     <div
-                        className="w-3 h-3 rounded-full mt-1 shrink-0"
-                        style={{ background: courseColor ?? '#3B82F6' }}
+                        className="w-3.5 h-3.5 rounded-full mt-1.5 shrink-0"
+                        style={{ background: courseColor ?? '#1A1A1A' }}
                     />
                     <div className="flex-1">
                         {editing ? (
                             <input
                                 value={form.title}
                                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                                className="input input-bordered input-sm w-full"
+                                className="w-full h-10 px-3 rounded-xl border border-[#E5E5E5] text-[15px] font-bold text-[#1A1A1A] outline-none mb-2"
                             />
                         ) : (
-                            <h3 className="font-medium text-base text-base-content">
+                            <h3 className="font-bold text-[20px] text-[#1A1A1A] mb-1 leading-tight">
                                 {event.title}
                             </h3>
                         )}
-                        <span className={`badge badge-xs mt-1 ${eventTypeBadge[event.type] ?? 'badge-ghost'}`}>
+                        <span className={`px-2.5 py-1 rounded-[6px] text-[11px] font-bold ${eventTypeBadge[event.type] ?? 'bg-[#F3F4F6] text-[#1A1A1A]'}`}>
                             {eventTypeLabel[event.type] ?? event.type}
                         </span>
                     </div>
                 </div>
 
                 {editing ? (
-                    <div className="flex flex-col gap-3">
-
-                        <div>
-                            <label className="text-xs text-base-content/50 mb-1 block">Type</label>
-                            <select
-                                value={form.type}
-                                onChange={(e) => setForm({ ...form, type: e.target.value as Event['type'] })}
-                                className="select select-bordered select-sm w-full"
-                            >
-                                {Object.entries(eventTypeLabel).map(([key, label]) => (
-                                    <option key={key} value={key}>{label}</option>
-                                ))}
-                            </select>
+                    <div className="flex flex-col gap-5">
+                        <div className="flex gap-4">
+                            <div className="flex-1">
+                                <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Type</label>
+                                <select
+                                    value={form.type}
+                                    onChange={(e) => setForm({ ...form, type: e.target.value as Event['type'] })}
+                                    className="w-full h-11 px-3 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] bg-transparent outline-none"
+                                >
+                                    {Object.entries(eventTypeLabel).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex-1" />
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-4">
                             <div className="flex-1">
-                                <label className="text-xs text-base-content/50 mb-1 block">Début</label>
+                                <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Début</label>
                                 <input
                                     type="datetime-local"
                                     value={form.startDate}
                                     onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                                    className="input input-bordered input-xs w-full"
+                                    className="w-full h-11 px-3 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none"
                                 />
                             </div>
                             <div className="flex-1">
-                                <label className="text-xs text-base-content/50 mb-1 block">Fin</label>
+                                <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Fin</label>
                                 <input
                                     type="datetime-local"
                                     value={form.endDate}
                                     onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                                    className="input input-bordered input-xs w-full"
+                                    className="w-full h-11 px-3 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="text-xs text-base-content/50 mb-1 block">Lieu</label>
+                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Lieu</label>
                             <input
                                 value={form.location}
                                 onChange={(e) => setForm({ ...form, location: e.target.value })}
                                 placeholder="ex: Amphi B"
-                                className="input input-bordered input-sm w-full"
+                                className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none"
                             />
                         </div>
 
                         <div>
-                            <label className="text-xs text-base-content/50 mb-1 block">Description</label>
+                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Description</label>
                             <textarea
                                 value={form.description}
                                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                className="textarea textarea-bordered textarea-sm w-full"
+                                className="w-full rounded-xl border border-[#E5E5E5] text-[15px] p-3 font-medium text-[#1A1A1A] outline-none min-h-[80px]"
                                 rows={2}
                             />
                         </div>
-
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-2 text-sm">
-                        <div className="flex gap-2 text-base-content/60">
-                            <span>🕐</span>
-                            <span>
-                                {format(parseISO(event.startDate), 'EEEE d MMMM · HH:mm', { locale: fr })}
-                                {' – '}
-                                {format(parseISO(event.endDate), 'HH:mm', { locale: fr })}
-                            </span>
+                    <div className="flex flex-col gap-4 text-[15px] font-medium text-[#1A1A1A] mt-2 mb-4 bg-[#FAF9F6] p-5 rounded-[16px]">
+                        <div className="flex gap-3 items-start">
+                            <Clock size={16} className="text-[#737373] mt-0.5 shrink-0" />
+                            <div>
+                                <div className="font-bold">{format(parseISO(event.startDate), 'EEEE d MMMM', { locale: fr })}</div>
+                                <div className="text-[#737373]">{format(parseISO(event.startDate), 'HHhmm', { locale: fr })} – {format(parseISO(event.endDate), 'HHhmm', { locale: fr })}</div>
+                            </div>
                         </div>
                         {event.location && (
-                            <div className="flex gap-2 text-base-content/60">
-                                <span>📍</span>
+                            <div className="flex gap-3 items-center">
+                                <MapPin size={16} className="text-[#737373] shrink-0" />
                                 <span>{event.location}</span>
                             </div>
                         )}
                         {event.description && (
-                            <div className="flex gap-2 text-base-content/60">
-                                <span>📝</span>
-                                <span>{event.description}</span>
+                            <div className="flex gap-3 items-start">
+                                <FileText size={16} className="text-[#737373] mt-0.5 shrink-0" />
+                                <span className="whitespace-pre-line text-[14px] text-[#737373]">{event.description}</span>
                             </div>
                         )}
                     </div>
                 )}
 
                 {/* Actions */}
-                <div className="flex justify-between items-center mt-6">
+                <div className="flex justify-between items-center mt-8 pt-4 border-t border-[#E5E5E5]">
                     <button
+                        type="button"
                         onClick={() => {
                             if (confirm('Supprimer cet événement ?')) {
                                 onDelete(event.id);
                                 onClose();
                             }
                         }}
-                        className="btn btn-ghost btn-xs text-error"
+                        className="text-[13px] font-bold text-[#EF4444] hover:opacity-70 px-2"
                     >
                         Supprimer
                     </button>
-                    <div className="flex gap-2">
-                        <button onClick={onClose} className="btn btn-ghost btn-sm">
+                    <div className="flex gap-3">
+                        <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-[#E5E5E5] text-[15px] font-bold text-[#1A1A1A] hover:bg-gray-50 bg-white">
                             Fermer
                         </button>
                         {editing ? (
-                            <button onClick={handleSave} className="btn btn-neutral btn-sm">
+                            <button onClick={handleSave} className="px-5 py-2.5 rounded-xl border border-[#1A1A1A] bg-[#1A1A1A] text-white text-[15px] font-bold hover:opacity-90 transition-opacity">
                                 Enregistrer
                             </button>
                         ) : (
-                            <button
-                                onClick={() => setEditing(true)}
-                                className="btn btn-neutral btn-sm"
-                            >
+                            <button onClick={() => setEditing(true)} className="px-5 py-2.5 rounded-xl border border-[#E5E5E5] text-[15px] font-bold text-[#1A1A1A] hover:bg-gray-50 bg-white shadow-sm">
                                 Modifier
                             </button>
                         )}
@@ -233,8 +238,7 @@ const EventModal = ({
                 </div>
 
             </div>
-            <div className="modal-backdrop" onClick={onClose} />
-        </dialog>
+        </div>
     );
 };
 
@@ -259,7 +263,7 @@ const CreateEventModal = ({
         title: '',
         type: 'CLASS' as Event['type'],
         startDate: format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
-        endDate: format(addDays(defaultDate, 0), "yyyy-MM-dd'T'HH:mm"),
+        endDate: format(new Date(defaultDate.getTime() + 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
         location: '',
         courseId: '',
     });
@@ -309,31 +313,31 @@ const CreateEventModal = ({
     };
 
     return (
-        <dialog open className="modal modal-open">
-            <div className="modal-box max-w-md">
+        <div className="fixed inset-0 z-[100] flex justify-center items-center p-4 sm:p-6 bg-black/20 backdrop-blur-[2px]">
+            <div className="bg-white w-full max-w-[480px] max-h-[90vh] overflow-y-auto rounded-[24px] p-8 shadow-2xl relative scrollbar-hide">
 
-                <h3 className="font-medium text-base mb-5">Nouvel événement</h3>
+                <h2 className="text-[22px] font-bold text-[#1A1A1A] mb-8">Nouvel événement</h2>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
                     <div>
-                        <label className="text-xs text-base-content/50 mb-1 block">Titre</label>
+                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Titre</label>
                         <input
                             value={form.title}
                             onChange={(e) => setForm({ ...form, title: e.target.value })}
                             placeholder="ex: Cours de Maths"
                             required
-                            className="input input-bordered input-sm w-full"
+                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none"
                         />
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-4">
                         <div className="flex-1">
-                            <label className="text-xs text-base-content/50 mb-1 block">Type</label>
+                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Type</label>
                             <select
                                 value={form.type}
                                 onChange={(e) => setForm({ ...form, type: e.target.value as Event['type'] })}
-                                className="select select-bordered select-sm w-full"
+                                className="w-full h-11 px-3 rounded-xl border border-[#E5E5E5] text-[15px] font-medium bg-transparent text-[#1A1A1A] outline-none"
                             >
                                 {Object.entries(eventTypeLabel).map(([key, label]) => (
                                     <option key={key} value={key}>{label}</option>
@@ -341,11 +345,11 @@ const CreateEventModal = ({
                             </select>
                         </div>
                         <div className="flex-1">
-                            <label className="text-xs text-base-content/50 mb-1 block">Cours</label>
+                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Cours lié</label>
                             <select
                                 value={form.courseId}
                                 onChange={(e) => setForm({ ...form, courseId: e.target.value })}
-                                className="select select-bordered select-sm w-full"
+                                className="w-full h-11 px-3 rounded-xl border border-[#E5E5E5] text-[15px] font-medium bg-transparent text-[#1A1A1A] outline-none"
                             >
                                 <option value="">Aucun</option>
                                 {courses.map((c) => (
@@ -355,70 +359,70 @@ const CreateEventModal = ({
                         </div>
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-4">
                         <div className="flex-1">
-                            <label className="text-xs text-base-content/50 mb-1 block">Début</label>
+                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Début</label>
                             <input
                                 type="datetime-local"
                                 value={form.startDate}
                                 onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                                 required
-                                className="input input-bordered input-xs w-full"
+                                className="w-full h-11 px-3 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none"
                             />
                         </div>
                         <div className="flex-1">
-                            <label className="text-xs text-base-content/50 mb-1 block">Fin</label>
+                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Fin</label>
                             <input
                                 type="datetime-local"
                                 value={form.endDate}
                                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                                 required
-                                className="input input-bordered input-xs w-full"
+                                className="w-full h-11 px-3 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-xs text-base-content/50 mb-1 block">Lieu (optionnel)</label>
+                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Lieu (optionnel)</label>
                         <input
                             value={form.location}
                             onChange={(e) => setForm({ ...form, location: e.target.value })}
                             placeholder="ex: Amphi B"
-                            className="input input-bordered input-sm w-full"
+                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none"
                         />
                     </div>
 
-                    <div className="flex flex-col gap-2 mt-2 bg-base-200/50 p-3 rounded-xl border border-base-200">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                    <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[16px] p-5">
+                        <label className="flex items-center gap-3 cursor-pointer">
                             <input 
                                 type="checkbox" 
-                                className="checkbox checkbox-sm"
                                 checked={isRecurring}
                                 onChange={(e) => setIsRecurring(e.target.checked)}
+                                className="w-5 h-5 rounded border-gray-300 text-black focus:ring-black accent-black"
                             />
-                            <span className="text-sm font-medium">Répéter toutes les semaines</span>
+                            <span className="text-[15px] font-bold text-[#1A1A1A]">Répéter toutes les semaines</span>
                         </label>
                         {isRecurring && (
-                            <div className="pl-6 mt-1">
-                                <label className="text-xs text-base-content/50 mb-1 block">Jusqu'au</label>
+                            <div className="mt-4 pt-4 border-t border-[#E5E5E5]">
+                                <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest block mb-2">Jusqu'au</label>
                                 <input
                                     type="date"
                                     value={recurrenceEndDate}
                                     onChange={(e) => setRecurrenceEndDate(e.target.value)}
                                     required={isRecurring}
-                                    className="input input-bordered input-xs w-full max-w-[150px]"
+                                    className="w-[180px] h-10 px-3 rounded-xl border border-[#E5E5E5] text-[14px] font-medium outline-none"
                                 />
                             </div>
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-2">
-                        <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
+                    <div className="flex justify-end gap-3 mt-4">
+                        <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl border border-[#E5E5E5] text-[15px] font-bold text-[#1A1A1A] hover:bg-gray-50 bg-white">
                             Annuler
                         </button>
-                        <button type="submit" disabled={isLoading} className="btn btn-neutral btn-sm">
+                        <button type="submit" disabled={isLoading} className="px-5 py-2.5 rounded-xl border border-[#1A1A1A] bg-[#1A1A1A] text-white text-[15px] font-bold hover:opacity-90 flex items-center justify-center min-w-[120px]">
                             {isLoading
-                                ? <span className="loading loading-spinner loading-xs" />
+                                ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                 : 'Créer'
                             }
                         </button>
@@ -427,8 +431,7 @@ const CreateEventModal = ({
                 </form>
 
             </div>
-            <div className="modal-backdrop" onClick={onClose} />
-        </dialog>
+        </div>
     );
 };
 
@@ -465,76 +468,62 @@ const CalendarGrid = ({
         events.filter((e) => isSameDay(parseISO(e.startDate), d));
 
     const getCourseColor = (courseId: string | null | undefined) =>
-        courses.find((c) => c.id === courseId)?.color ?? '#3B82F6';
+        courses.find((c) => c.id === courseId)?.color ?? '#1A1A1A';
 
     const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
     return (
-        <div>
-            {/* Noms des jours */}
-            <div className="grid grid-cols-7 mb-1">
-                {dayNames.map((d) => (
-                    <div key={d} className="text-xs text-center text-base-content/40 py-2 font-medium">
-                        {d}
-                    </div>
-                ))}
-            </div>
+        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-4 md:p-6 mb-8 mt-5 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-6">
+            <div className="min-w-[320px]">
+                {/* Noms des jours */}
+                <div className="grid grid-cols-7 mb-4">
+                    {dayNames.map((d) => (
+                        <div key={d} className="text-[12px] md:text-[13px] text-center text-[#737373] font-bold">
+                            {d}
+                        </div>
+                    ))}
+                </div>
 
-            {/* Cases */}
-            <div className="grid grid-cols-7 gap-0.5">
+                {/* Cases */}
+                <div className="grid grid-cols-7 gap-y-3 gap-x-1">
                 {days.map((d) => {
                     const dayEvents = getEventsForDay(d);
                     const isSelected = isSameDay(d, selectedDay);
                     const isCurrentMonth = isSameMonth(d, currentMonth);
-                    const isTodayDay = isToday(d);
 
                     return (
                         <div
                             key={d.toString()}
                             onClick={() => onSelectDay(d)}
-                            className={`
-                min-h-14 p-1 rounded-lg cursor-pointer transition-colors
-                ${isSelected ? 'bg-base-200' : 'hover:bg-base-200/50'}
-                ${!isCurrentMonth ? 'opacity-30' : ''}
-              `}
+                            className="min-h-[64px] flex flex-col items-center justify-start cursor-pointer group"
                         >
-                            {/* Numéro du jour */}
-                            <div className="flex justify-center mb-1">
-                                <span className={`
-                  text-xs w-6 h-6 flex items-center justify-center rounded-full
-                  ${isTodayDay
-                                        ? 'bg-base-content text-base-100 font-medium'
-                                        : 'text-base-content/60'
-                                    }
-                `}>
-                                    {format(d, 'd')}
-                                </span>
+                            <div className={`
+                                w-9 h-9 flex items-center justify-center rounded-full text-[15px] font-bold mb-[6px] transition-colors
+                                ${!isCurrentMonth ? 'text-[#D4D4D4]' : isSelected ? 'bg-[#1A1A1A] text-white' : 'text-[#1A1A1A] hover:bg-[#E5E5E5]'}
+                            `}>
+                                {format(d, 'd')}
                             </div>
 
-                            {/* Points d'events */}
-                            <div className="flex flex-wrap gap-0.5 justify-center">
-                                {dayEvents.slice(0, 3).map((e) => (
+                            <div className="flex gap-1 justify-center flex-wrap px-1 w-full max-w-[28px]">
+                                {dayEvents.slice(0, 4).map((e) => (
                                     <div
                                         key={e.id}
                                         className="w-1.5 h-1.5 rounded-full"
                                         style={{ background: getCourseColor(e.courseId) }}
                                     />
                                 ))}
-                                {dayEvents.length > 3 && (
-                                    <div className="text-xs text-base-content/30">
-                                        +{dayEvents.length - 3}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     );
                 })}
+                </div>
             </div>
         </div>
     );
 };
 
 // ─── Planner hebdomadaire (Emploi du temps) ────────────────
+// Restauration de l'affichage hebdo adapté au nouveau style
 
 interface WeeklyPlannerProps {
     currentDate: Date;
@@ -544,103 +533,99 @@ interface WeeklyPlannerProps {
 }
 
 const WeeklyPlanner = ({ currentDate, events, courses, onSelectEvent }: WeeklyPlannerProps) => {
-    // Affiche du Lundi au Vendredi (5 jours), de 08:00 à 19:00 (11 blocs)
+    // Affiche du Lundi au Vendredi (5 jours + Sam), de 08:00 à 19:00 (11 blocs)
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
     const days = Array.from({ length: 6 }).map((_, i) => addDays(weekStart, i)); // Lun-Sam
     const hours = Array.from({ length: 12 }).map((_, i) => i + 8); // 8h à 19h
 
     const getCourseColor = (courseId: string | null | undefined) =>
-        courses.find((c) => c.id === courseId)?.color ?? '#3B82F6';
+        courses.find((c) => c.id === courseId)?.color ?? '#1A1A1A';
 
     return (
-        <div className="flex flex-col border border-base-200 rounded-xl overflow-x-auto bg-white shadow-sm scrollbar-thin">
-            {/* 1. Header des jours */}
-            <div className="flex border-b border-base-200 bg-gray-50/50">
-                <div className="w-12 shrink-0 border-r border-base-200"></div>
-                {days.map(d => (
-                    <div key={d.toString()} className={`flex-1 min-w-[120px] text-center py-2.5 border-r border-base-200 last:border-none ${isToday(d) ? 'bg-blue-50/50' : ''}`}>
-                        <div className={`text-[11px] font-semibold uppercase tracking-wider ${isToday(d) ? 'text-blue-600' : 'text-gray-500'}`}>
-                            {format(d, 'EEEE', { locale: fr })}
-                        </div>
-                        <div className={`text-xl font-medium mt-0.5 ${isToday(d) ? 'text-blue-600' : 'text-gray-800'}`}>
-                            {format(d, 'd')}
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* 2. Grille horaire et événements */}
-            <div className="flex relative h-[500px] overflow-y-auto scrollbar-thin">
-                {/* Colonne des heures */}
-                <div className="w-12 shrink-0 border-r border-base-200 bg-gray-50/30 flex flex-col relative z-10">
-                    {hours.map((h, idx) => (
-                        <div key={h} className={`h-[50px] relative ${idx < hours.length - 1 ? 'border-b border-base-200/50' : ''}`}>
-                            <span className="absolute -top-2.5 right-2 text-[10px] font-medium text-gray-400 bg-white px-0.5">{h}h</span>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Colonnes des jours */}
-                {days.map(d => {
-                    const dayEvents = events.filter(e => isSameDay(parseISO(e.startDate), d));
-                    return (
-                        <div key={d.toString()} className={`flex-1 min-w-[120px] border-r border-base-200 last:border-none relative ${isToday(d) ? 'bg-blue-50/10' : ''}`}>
-                            {/* Lignes horizontales de fond */}
-                            {hours.map((h, idx) => (
-                                <div key={h} className={`h-[50px] pointer-events-none ${idx < hours.length - 1 ? 'border-b border-base-200/30' : ''}`} />
+        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] overflow-hidden flex flex-col mb-8 mt-5 shadow-sm -mx-4 md:mx-0">
+            {/* Conteneur scrollable horizontal */}
+            <div className="overflow-x-auto scrollbar-hide">
+                <div className="min-w-[770px] flex flex-col">
+                    
+                    {/* Conteneur scrollable vertical unique pour le header et la grille */}
+                    <div className="h-[500px] overflow-y-auto scrollbar-thin relative bg-white">
+                        
+                        {/* Header des jours - Collant au sommet du scroll vertical */}
+                        <div className="flex border-b border-[#E5E5E5] bg-white sticky top-0 z-40">
+                            <div className="w-[50px] shrink-0 border-r border-[#E5E5E5] bg-white"></div>
+                            {days.map(d => (
+                                <div key={d.toString()} className="flex-1 min-w-[120px] text-center py-3 border-r border-[#E5E5E5] last:border-none bg-white">
+                                    <div className={`text-[12px] font-bold uppercase tracking-widest ${isToday(d) ? 'text-[#1A1A1A]' : 'text-[#737373]'}`}>
+                                        {format(d, 'EEEE', { locale: fr })}
+                                    </div>
+                                    <div className={`text-[18px] font-bold mt-1 ${isToday(d) ? 'text-[#1A1A1A] bg-[#E5E5E5] inline-block px-2 rounded-lg' : 'text-[#1A1A1A]'}`}>
+                                        {format(d, 'd')}
+                                    </div>
+                                </div>
                             ))}
+                        </div>
 
-                            {/* Blocs d'événements */}
-                            {dayEvents.map(event => {
-                                const start = parseISO(event.startDate);
-                                const end = parseISO(event.endDate);
-                                const startHour = start.getHours() + start.getMinutes() / 60;
-                                const endHour = end.getHours() + end.getMinutes() / 60;
-                                
-                                // On dessine si c'est globalement dans la plage 8h-20h
-                                // Base : 8h = 0px | Hauteur : 50px par heure
-                                const top = (startHour - 8) * 50;
-                                let height = (endHour - startHour) * 50;
-                                if (height < 20) height = 20; // min-height pour la visibilité
-                                
-                                // Exclusion hors champ pour l'esthétique simple
-                                if (top < -50 || top > hours.length * 50) return null;
+                        {/* Grille */}
+                        <div className="flex relative bg-white">
+                            <div className="w-[50px] shrink-0 border-r border-[#E5E5E5] flex flex-col relative z-20 bg-white">
+                                {hours.map((h, idx) => (
+                                    <div key={h} className={`h-[55px] relative ${idx < hours.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
+                                        <span className="absolute -top-2.5 right-2 text-[11px] font-bold text-[#A3A3A3] bg-white px-1">{h}h</span>
+                                    </div>
+                                ))}
+                            </div>
 
-                                const color = getCourseColor(event.courseId);
-
+                            {days.map(d => {
+                                const dayEvents = events.filter(e => isSameDay(parseISO(e.startDate), d));
                                 return (
-                                    <div
-                                        key={event.id}
-                                        onClick={() => onSelectEvent(event)}
-                                        className="absolute left-1 right-1 rounded-md p-1.5 overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform z-20 group border"
-                                        style={{
-                                            top: `${top}px`,
-                                            height: `${height}px`,
-                                            backgroundColor: color + '15', // Opacité très faible
-                                            borderColor: color + '40',     // Bordure discrète
-                                            borderLeft: `4px solid ${color}` // Bordure d'accroche
-                                        }}
-                                        title={`${event.title} (${format(start, 'HH:mm')} - ${format(end, 'HH:mm')})`}
-                                    >
-                                        <div className="text-[11px] font-semibold leading-tight text-gray-800 break-words group-hover:text-blue-700">
-                                            {event.title}
-                                        </div>
-                                        {height >= 40 && (
-                                            <div className="text-[10px] text-gray-500 mt-0.5 truncate bg-white/50 w-max px-1 rounded-sm">
-                                                {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
-                                            </div>
-                                        )}
-                                        {height >= 60 && event.location && (
-                                            <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-                                                📍 {event.location}
-                                            </div>
-                                        )}
+                                    <div key={d.toString()} className="flex-1 min-w-[120px] border-r border-[#E5E5E5] last:border-none relative">
+                                        {hours.map((h, idx) => (
+                                            <div key={h} className={`h-[55px] pointer-events-none ${idx < hours.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`} />
+                                        ))}
+                                        {dayEvents.map(event => {
+                                            const start = parseISO(event.startDate);
+                                            const end = parseISO(event.endDate);
+                                            const startHour = start.getHours() + start.getMinutes() / 60;
+                                            const endHour = end.getHours() + end.getMinutes() / 60;
+                                            
+                                            const top = (startHour - 8) * 55;
+                                            let height = (endHour - startHour) * 55;
+                                            if (height < 20) height = 20;
+                                            if (top < -55 || top > hours.length * 55) return null;
+
+                                            const color = getCourseColor(event.courseId);
+
+                                            return (
+                                                <div
+                                                    key={event.id}
+                                                    onClick={() => onSelectEvent(event)}
+                                                    className="absolute left-[3px] right-[3px] rounded-[6px] p-2 overflow-hidden cursor-pointer hover:shadow-md transition-shadow z-30 border"
+                                                    style={{
+                                                        top: `${top}px`,
+                                                        height: `${height}px`,
+                                                        backgroundColor: color + '1A', 
+                                                        borderColor: color + '40', 
+                                                        borderLeft: `4px solid ${color}` 
+                                                    }}
+                                                    title={`${event.title} (${format(start, 'HH:mm')} - ${format(end, 'HH:mm')})`}
+                                                >
+                                                    <div className="text-[12px] font-bold leading-tight text-[#1A1A1A]">
+                                                        {event.title}
+                                                    </div>
+                                                    {height >= 40 && (
+                                                        <div className="text-[10px] font-medium text-[#737373] mt-0.5 truncate bg-white/60 px-1 rounded max-w-max">
+                                                            {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 );
                             })}
                         </div>
-                    );
-                })}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -651,7 +636,7 @@ const WeeklyPlanner = ({ currentDate, events, courses, onSelectEvent }: WeeklyPl
 export default function AgendaPage() {
     const { data: events = [], isLoading: eventsLoading } = useEvents();
     const { data: courses = [] } = useCourses();
-    const { mutate: createEvent, isPending: isCreating } = useCreateEvent();
+    const { mutateAsync: createEventAsync, isPending: isCreating } = useCreateEvent();
     const { mutate: updateEvent } = useUpdateEvent();
     const { mutate: deleteEvent } = useDeleteEvent();
 
@@ -660,209 +645,198 @@ export default function AgendaPage() {
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [activeCourseFilter, setActiveCourseFilter] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+    const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
 
     const activeCourses = courses
         .filter((c) => !c.isDeleted)
         .map((c) => ({ id: c.id, name: c.name, color: c.color }));
 
-    // Filtre par cours
     const filteredEvents = activeCourseFilter
         ? events.filter((e) => e.courseId === activeCourseFilter)
         : events;
 
-    // Events du jour sélectionné
     const selectedDayEvents = filteredEvents
         .filter((e) => isSameDay(parseISO(e.startDate), selectedDay))
         .sort((a, b) => parseISO(a.startDate).getTime() - parseISO(b.startDate).getTime());
 
-    const getCourseColor = (courseId: string | null | undefined) =>
-        activeCourses.find((c) => c.id === courseId)?.color ?? '#3B82F6';
-
     return (
-        <div className="max-w-3xl mx-auto flex flex-col gap-5">
+        <div className="max-w-[1400px] mx-auto flex flex-col px-4 md:px-6 pb-20 md:pb-10 pt-2 md:pt-4">
 
             {/* Header */}
-            <div className="flex justify-between items-center px-1">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-xl font-semibold text-gray-800 tracking-tight">Agenda</h1>
-                    {/* Toggle Mois/Semaine */}
-                    <div className="bg-gray-100 p-0.5 rounded-lg flex text-[13px] font-medium">
-                        <button 
-                            className={`px-3 py-1 rounded-md transition-all ${viewMode === 'month' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                            onClick={() => setViewMode('month')}
-                        >
-                            Mois
-                        </button>
-                        <button 
-                            className={`px-3 py-1 rounded-md transition-all ${viewMode === 'week' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                            onClick={() => setViewMode('week')}
-                        >
-                            Semaine
-                        </button>
-                    </div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2 mt-2">
+                
+                <div className="flex items-center justify-between md:justify-start gap-2 md:gap-4">
+                    <button 
+                        onClick={() => setCurrentDate(viewMode === 'month' ? subMonths(currentDate, 1) : subWeeks(currentDate, 1))} 
+                        className="w-10 h-10 flex items-center justify-center rounded-xl border border-[#E5E5E5] text-[#1A1A1A] hover:bg-gray-50 transition-colors bg-white shadow-sm"
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+                    <span className="text-[26px] font-bold text-[#1A1A1A] capitalize tracking-tight min-w-[160px] text-center">
+                        {viewMode === 'month' 
+                            ? format(currentDate, 'MMMM yyyy', { locale: fr })
+                            : `Sem. du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: fr })}`
+                        }
+                    </span>
+                    <button 
+                        onClick={() => setCurrentDate(viewMode === 'month' ? addMonths(currentDate, 1) : addWeeks(currentDate, 1))} 
+                        className="w-10 h-10 flex items-center justify-center rounded-xl border border-[#E5E5E5] text-[#1A1A1A] hover:bg-gray-50 transition-colors bg-white shadow-sm"
+                    >
+                        <ChevronRight size={18} />
+                    </button>
+                    
+                    <button 
+                        onClick={() => {
+                            setCurrentDate(new Date());
+                            setSelectedDay(new Date());
+                        }} 
+                        className="px-4 h-10 ml-2 rounded-xl border border-[#E5E5E5] text-[#1A1A1A] font-bold text-[14px] hover:bg-gray-50 bg-white shadow-sm transition-colors"
+                    >
+                        Aujourd'hui
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="btn btn-neutral btn-sm"
-                >
-                    + Événement
-                </button>
+                
+                <div className="flex items-center gap-4">
+                     <div className="flex rounded-xl border border-[#E5E5E5] overflow-hidden bg-[#FAF9F6] p-1 gap-1">
+                          {['Mois', 'Semaine', 'Jour'].map(view => {
+                              const vKey = view === 'Mois' ? 'month' : view === 'Semaine' ? 'week' : 'day';
+                              return (
+                                  <button 
+                                      key={vKey}
+                                      onClick={() => setViewMode(vKey as any)} 
+                                      className={`px-4 py-[6px] rounded-[8px] text-[13px] font-bold transition-colors ${viewMode === vKey ? 'bg-white text-[#1A1A1A] shadow-sm' : 'bg-transparent text-[#737373] hover:text-[#1A1A1A]'}`}
+                                  >
+                                      {view}
+                                  </button>
+                              );
+                          })}
+                     </div>
+                     <button
+                         onClick={() => setShowCreateModal(true)}
+                         className="px-4 py-2.5 md:px-5 rounded-xl border border-[#E5E5E5] bg-white text-[15px] font-bold text-[#1A1A1A] hover:bg-gray-50 shadow-sm transition-colors whitespace-nowrap flex items-center justify-center gap-2"
+                     >
+                         <Plus size={16} />
+                         <span className="hidden md:inline">Événement</span>
+                     </button>
+                </div>
+
             </div>
 
-            {/* Filtres cours */}
-            <div className="flex gap-2 flex-wrap">
+            {/* Filter Tags */}
+            <div className="flex flex-wrap gap-2.5 mt-5 mb-2">
                 <button
                     onClick={() => setActiveCourseFilter(null)}
-                    className={`badge cursor-pointer ${activeCourseFilter === null ? 'badge-neutral' : 'badge-ghost'}`}
+                    className={`px-4 py-[6px] rounded-full text-[13px] font-bold transition-colors ${activeCourseFilter === null ? 'bg-[#1A1A1A] text-white' : 'bg-transparent border border-[#E5E5E5] text-[#1A1A1A] hover:border-[#A3A3A3]'}`}
                 >
                     Tous
                 </button>
                 {activeCourses.map((c) => (
                     <button
                         key={c.id}
-                        onClick={() => setActiveCourseFilter(
-                            activeCourseFilter === c.id ? null : c.id
-                        )}
-                        className={`badge cursor-pointer gap-1 ${activeCourseFilter === c.id ? 'badge-neutral' : 'badge-ghost'}`}
+                        onClick={() => setActiveCourseFilter(activeCourseFilter === c.id ? null : c.id)}
+                        className={`px-3.5 py-[6px] rounded-full text-[13px] font-bold transition-colors flex items-center gap-2 border ${activeCourseFilter === c.id ? 'bg-[#FAF9F6] border-[#A3A3A3] text-[#1A1A1A]' : 'bg-transparent border-[#E5E5E5] text-[#1A1A1A] hover:border-[#A3A3A3]'}`}
                     >
-                        <span
-                            className="w-2 h-2 rounded-full"
-                            style={{ background: c.color }}
-                        />
+                        <span className="w-2.5 h-2.5 rounded-full mt-0.5" style={{ background: c.color }} />
                         {c.name}
                     </button>
                 ))}
             </div>
 
             {/* Calendrier / Planner */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-
-                {/* Navigation Période */}
-                <div className="flex items-center justify-between mb-5">
-                    <button
-                        onClick={() => setCurrentDate(viewMode === 'month' ? subMonths(currentDate, 1) : subWeeks(currentDate, 1))}
-                        className="btn btn-ghost btn-sm btn-circle hover:bg-gray-100 text-gray-600"
-                    >
-                        ←
-                    </button>
-                    <span className="text-[15px] font-semibold text-gray-800 capitalize tracking-wide">
-                        {viewMode === 'month' 
-                            ? format(currentDate, 'MMMM yyyy', { locale: fr })
-                            : `Sem. du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: fr })}`
-                        }
-                    </span>
-                    <button
-                        onClick={() => setCurrentDate(viewMode === 'month' ? addMonths(currentDate, 1) : addWeeks(currentDate, 1))}
-                        className="btn btn-ghost btn-sm btn-circle hover:bg-gray-100 text-gray-600"
-                    >
-                        →
-                    </button>
-                </div>
-
-                {eventsLoading ? (
-                    <div className="skeleton h-64 rounded-xl" />
-                ) : viewMode === 'month' ? (
-                    <CalendarGrid
-                        currentMonth={currentDate}
-                        events={filteredEvents}
-                        courses={activeCourses}
-                        selectedDay={selectedDay}
-                        onSelectDay={setSelectedDay}
-                    />
-                ) : (
-                    <WeeklyPlanner
-                        currentDate={currentDate}
-                        events={filteredEvents}
-                        courses={activeCourses}
-                        onSelectEvent={setSelectedEvent}
-                    />
-                )}
-
-            </div>
-
-            {/* Events du jour sélectionné (Seulement en vue Mois) */}
-            {viewMode === 'month' && (
-            <div className="flex flex-col gap-1">
-                <div className="text-xs font-medium text-base-content/40 uppercase tracking-widest mb-3">
-                    {format(selectedDay, 'EEEE d MMMM', { locale: fr })}
-                    {' · '}
-                    {selectedDayEvents.length} événement{selectedDayEvents.length !== 1 ? 's' : ''}
-                </div>
-
-                {selectedDayEvents.length === 0 ? (
-                    <div className="bg-base-100 rounded-xl border border-base-200 p-5 text-sm text-base-content/40 text-center">
-                        Aucun événement ce jour
-                    </div>
-                ) : (
-                    <div className="bg-base-100 rounded-xl border border-base-200 overflow-hidden">
-                        {selectedDayEvents.map((event, i) => (
-                            <div
-                                key={event.id}
-                                onClick={() => setSelectedEvent(event)}
-                                className={`
-                  flex items-center gap-3 px-5 py-3 cursor-pointer
-                  hover:bg-base-200 transition-colors
-                  ${i < selectedDayEvents.length - 1 ? 'border-b border-base-200' : ''}
-                `}
-                            >
-                                <div
-                                    className="w-1 self-stretch rounded-full shrink-0"
-                                    style={{ background: getCourseColor(event.courseId) }}
-                                />
-                                <div className="text-xs text-base-content/40 min-w-20">
-                                    {format(parseISO(event.startDate), 'HH:mm')}
-                                    {' – '}
-                                    {format(parseISO(event.endDate), 'HH:mm')}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="text-sm text-base-content">{event.title}</div>
-                                    {event.location && (
-                                        <div className="text-xs text-base-content/40 mt-0.5">
-                                            {event.location}
-                                        </div>
-                                    )}
-                                </div>
-                                <span className={`badge badge-xs ${eventTypeBadge[event.type] ?? 'badge-ghost'}`}>
-                                    {eventTypeLabel[event.type] ?? event.type}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            {eventsLoading ? (
+                <div className="h-[500px] w-full bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] mt-6 animate-pulse" />
+            ) : viewMode === 'month' ? (
+                <CalendarGrid
+                    currentMonth={currentDate}
+                    events={filteredEvents}
+                    courses={activeCourses}
+                    selectedDay={selectedDay}
+                    onSelectDay={setSelectedDay}
+                />
+            ) : (
+                <WeeklyPlanner
+                    currentDate={currentDate}
+                    events={filteredEvents}
+                    courses={activeCourses}
+                    onSelectEvent={setSelectedEvent}
+                />
             )}
 
-            {/* Modal détail event */}
+            {/* Events du jour (Vue Mois uniquement) */}
+            {viewMode === 'month' && (
+                <div className="flex flex-col">
+                    <div className="text-[12px] font-bold text-[#737373] uppercase tracking-widest mb-4 ml-1">
+                        {format(selectedDay, 'EEEE d MMMM', { locale: fr })} — {selectedDayEvents.length} ÉVÉNEMENT{selectedDayEvents.length !== 1 ? 'S' : ''}
+                    </div>
+
+                    {selectedDayEvents.length === 0 ? (
+                        <div className="bg-[#FAF9F6] rounded-[24px] border border-[#E5E5E5] p-6 text-[14px] text-[#A3A3A3] text-center font-bold">
+                            Aucun événement pour cette journée.
+                        </div>
+                    ) : (
+                        <div className="bg-[#FAF9F6] rounded-[24px] border border-[#E5E5E5] flex flex-col overflow-hidden">
+                            {selectedDayEvents.map((event, i) => {
+                                const isNotLast = i !== selectedDayEvents.length - 1;
+                                const course = courses.find((c) => c.id === event.courseId);
+                                const color = course?.color ?? '#A3A3A3';
+                                
+                                return (
+                                <div key={event.id} onClick={() => setSelectedEvent(event)} className={`flex items-center p-4 relative cursor-pointer hover:bg-white transition-colors ${isNotLast ? 'border-b border-[#E5E5E5]' : ''}`}>
+                                    <div className="absolute left-5 top-4 bottom-4 w-1 rounded-full" style={{ background: color }} />
+                                    
+                                    <div className="w-[130px] shrink-0 pl-8 text-[13px] font-medium text-[#737373]">
+                                        {format(parseISO(event.startDate), 'HHh\x00mm')} – {format(parseISO(event.endDate), 'HHh\x00mm')}
+                                    </div>
+
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <div className="text-[15px] font-bold text-[#1A1A1A] truncate">
+                                            {course ? `${course.name} — ` : ''}{event.title}
+                                        </div>
+                                        <div className="text-[12px] font-medium text-[#737373] mt-0.5 truncate">
+                                            {event.location || event.description || ' '}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className={`px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wide shrink-0 ${eventTypeBadge[event.type] ?? 'bg-[#E5E5E5] text-[#1A1A1A]'}`}>
+                                        {eventTypeLabel[event.type] ?? event.type}
+                                    </div>
+                                </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Modals existantes */}
             {selectedEvent && (
                 <EventModal
                     event={selectedEvent}
-                    courseColor={getCourseColor(selectedEvent.courseId)}
+                    courseColor={activeCourses.find((c) => c.id === selectedEvent.courseId)?.color}
                     onClose={() => setSelectedEvent(null)}
-                    onDelete={(id) => {
-                        deleteEvent(id);
-                        setSelectedEvent(null);
-                    }}
+                    onDelete={deleteEvent}
                     onUpdate={(id, payload) => updateEvent({ id, payload })}
                 />
             )}
 
-            {/* Modal création */}
             {showCreateModal && (
                 <CreateEventModal
                     defaultDate={selectedDay}
                     courses={activeCourses}
                     onClose={() => setShowCreateModal(false)}
-                    onCreate={(payloads) => {
-                        for (const payload of payloads) {
-                            createEvent(payload);
+                    onCreate={async (payloads) => {
+                        try {
+                            for (const p of payloads) {
+                                await createEventAsync(p as Omit<Event, 'id'>);
+                            }
+                            setShowCreateModal(false);
+                        } catch (error) {
+                            console.error("Erreur lors de la création multiple:", error);
                         }
-                        setShowCreateModal(false);
                     }}
                     isLoading={isCreating}
                 />
             )}
-
         </div>
     );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { useAuth } from '../../hooks/useAuth';
+import logo from '@/assets/Fichier1.svg'
 
 export default function LoginPage() {
     const { login, isLoginLoading, loginError } = useAuth();
@@ -106,28 +107,11 @@ export default function LoginPage() {
                 {/* ── DROITE : Visuel ── */}
                 <div className="w-64 bg-neutral flex flex-col items-center justify-center p-8 shrink-0">
 
-                    <div className="text-4xl mb-3">📚</div>
-                    <div className="text-sm font-medium text-neutral-content mb-1">StudentApp</div>
+                    <div className="text-4xl mb-3"><img src={logo} alt="logo" className="w-20 h-20" /></div>
+                    <div className="text-sm font-medium text-neutral-content mb-1">StudyFlow</div>
                     <div className="text-xs text-neutral-content/40 text-center mb-8">
                         Ton assistant académique
                     </div>
-
-                    {[
-                        { icon: '📅', title: 'Agenda intelligent', sub: 'Cours, examens, révisions' },
-                        { icon: '✅', title: 'Gestion des tâches', sub: 'Board Kanban + Pomodoro' },
-                        { icon: '📊', title: 'Suivi des notes', sub: 'Moyennes et statistiques' },
-                        { icon: '⚠️', title: 'Analyse de risque', sub: 'Anticipe les difficultés' },
-                    ].map((f) => (
-                        <div key={f.title} className="flex items-start gap-3 mb-5 last:mb-0">
-                            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-content text-sm shrink-0">
-                                {f.icon}
-                            </div>
-                            <div>
-                                <div className="text-xs font-medium text-neutral-content">{f.title}</div>
-                                <div className="text-xs text-neutral-content/40">{f.sub}</div>
-                            </div>
-                        </div>
-                    ))}
 
                 </div>
 

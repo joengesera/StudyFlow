@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gradesApi } from '../api/grade.api';
+import { useSyncStore } from '../stores/syncStore';
 import type { Grade } from '../types';
 
 export const gradeKeys = {
@@ -9,9 +10,25 @@ export const gradeKeys = {
 };
 
 export const useGrades = (courseId?: string) => {
+    const setCacheGrades = useSyncStore((s) => s.setCacheGrades);
+    const cachedGrades = useSyncStore((s) => s.cache.grades);
+
     return useQuery({
         queryKey: courseId ? gradeKeys.byCourse(courseId) : gradeKeys.all,
-        queryFn: () => gradesApi.getAll(courseId),
+        queryFn: async () => {
+            const grades = await gradesApi.getAll(courseId);
+            // Persiste toutes les notes dans le cache local (uniquement pour les requêtes globales)
+            if (!courseId) {
+                setCacheGrades(grades);
+            }
+            return grades;
+        },
+        // Fallback sur le cache local (filtré par courseId si besoin)
+        placeholderData: !courseId && cachedGrades.length > 0
+            ? cachedGrades
+            : courseId && cachedGrades.length > 0
+                ? cachedGrades.filter((g) => g.courseId === courseId)
+                : undefined,
     });
 };
 

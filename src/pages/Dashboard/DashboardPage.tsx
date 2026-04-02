@@ -1,19 +1,20 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useEvents } from '../../hooks/useEvents';
-import type { Task, Event } from '../../types';
 import { useCourses } from '../../hooks/useCourses';
 import { useGrades } from '../../hooks/useGrades';
+import { useDashboardStats } from '../../hooks/useRisks';
+import { ArrowRight, Check } from 'lucide-react';
+import type { Task, Event } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────
 
 const priorityColor: Record<string, string> = {
-    CRITICAL: 'bg-red-500',
-    HIGH: 'bg-orange-500',
-    MEDIUM: 'bg-green-500',
-    LOW: 'bg-blue-500',
+    CRITICAL: '#8B5CF6',
+    HIGH: '#EF4444',
+    MEDIUM: '#F59E0B',
+    LOW: '#10B981',
 };
 
 const eventTypeLabel: Record<string, string> = {
@@ -31,24 +32,24 @@ const eventTypeLabel: Record<string, string> = {
 };
 
 const eventTypeBadge: Record<string, string> = {
-    CLASS: 'bg-blue-100 text-blue-600',
-    EXAM: 'bg-red-100 text-red-600',
-    EXAMEN: 'bg-red-100 text-red-600',
-    INTERRO: 'bg-orange-100 text-orange-600',
-    TP: 'bg-green-100 text-green-600',
-    STUDY: 'bg-green-100 text-green-600',
-    QUIZ: 'bg-orange-100 text-orange-600',
-    ASSIGNMENT: 'bg-blue-100 text-blue-600',
-    MEETING: 'bg-gray-100 text-gray-600',
-    PERSONAL: 'bg-gray-100 text-gray-600',
-    AUTRE: 'bg-gray-100 text-gray-600',
+    CLASS: 'bg-[#EFF6FF] text-[#3B82F6]',
+    EXAM: 'bg-[#FEF2F2] text-[#EF4444]',
+    EXAMEN: 'bg-[#FEF2F2] text-[#EF4444]',
+    INTERRO: 'bg-[#FFF7ED] text-[#F59E0B]',
+    TP: 'bg-[#F0FDF4] text-[#10B981]',
+    STUDY: 'bg-[#F0FDF4] text-[#10B981]',
+    QUIZ: 'bg-[#FFF7ED] text-[#F59E0B]',
+    ASSIGNMENT: 'bg-[#EFF6FF] text-[#3B82F6]',
+    MEETING: 'bg-[#F3F4F6] text-[#1A1A1A]',
+    PERSONAL: 'bg-[#F3F4F6] text-[#1A1A1A]',
+    AUTRE: 'bg-[#F3F4F6] text-[#1A1A1A]',
 };
 
 const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString('fr-FR', {
         hour: '2-digit',
         minute: '2-digit',
-    });
+    }).replace(':', 'h');
 
 const formatDueDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '';
@@ -57,10 +58,10 @@ const formatDueDate = (dateStr: string | null | undefined): string => {
     const diffDays = Math.ceil(
         (due.setHours(0, 0, 0, 0) - now.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)
     );
-    if (diffDays < 0) return 'En retard';
-    if (diffDays === 0) return "Aujourd'hui";
-    if (diffDays === 1) return 'Demain';
-    return `Dans ${diffDays}j`;
+    if (diffDays < 0) return 'en retard';
+    if (diffDays === 0) return "aujourd'hui";
+    if (diffDays === 1) return 'demain';
+    return `dans ${diffDays} jours`;
 };
 
 const isUrgent = (dateStr: string | null | undefined): boolean => {
@@ -86,36 +87,48 @@ interface TaskRowProps {
     task: Task;
     courseName?: string;
     onComplete: (id: string) => void;
+    isLast: boolean;
 }
 
-const TaskRow = ({ task, courseName, onComplete }: TaskRowProps) => {
+const TaskRow = ({ task, courseName, onComplete, isLast }: TaskRowProps) => {
     const due = formatDueDate(task.dueDate);
     const urgent = isUrgent(task.dueDate);
+    const isCompleted = task.status === 'COMPLETED';
 
     return (
-        <div className="flex items-center gap-4 py-3 border-b border-base-200 last:border-none hover:bg-base-50 transition-colors px-2 -mx-2 rounded-lg">
-            <input
-                type="checkbox"
-                className="checkbox checkbox-sm rounded-md border-base-300"
-                checked={task.status === 'COMPLETED'}
-                onChange={() => onComplete(task.id)}
-            />
+        <div className={`flex items-center gap-4 py-4 ${!isLast ? 'border-b border-[#E5E5E5]' : ''}`}>
+            {/* Checkbox */}
             <div
-                className={`w-2.5 h-2.5 rounded-full shrink-0 ${priorityColor[task.priority]}`}
+                onClick={() => onComplete(task.id)}
+                className={`w-[20px] h-[20px] rounded-[6px] border cursor-pointer flex justify-center items-center transition-colors shrink-0 shadow-sm ${isCompleted ? 'bg-[#10B981] border-[#10B981]' : 'bg-white border-[#A3A3A3] hover:border-[#1A1A1A]'}`}
+            >
+                {isCompleted && (
+                    <Check size={12} strokeWidth={3} className="text-white" />
+                )}
+            </div>
+
+            {/* Point de priorité */}
+            <div
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ background: isCompleted ? '#E5E5E5' : (priorityColor[task.priority] || '#A3A3A3') }}
             />
-            <div className="flex-1 min-w-0 flex items-center justify-between">
-                <div>
-                    <div className={`text-sm font-semibold ${task.status === 'COMPLETED' ? 'line-through text-base-content/30' : 'text-base-content'}`}>
+
+            {/* Infos de la tâche */}
+            <div className="flex-1 flex justify-between items-center min-w-0">
+                <div className="truncate pr-4">
+                    <div className={`text-[14px] font-bold truncate ${isCompleted ? 'text-[#A3A3A3] line-through' : 'text-[#1A1A1A]'}`}>
                         {task.title}
                     </div>
                     {due && (
-                        <div className={`text-xs mt-0.5 ${task.status === 'COMPLETED' ? 'text-base-content/30' : 'text-base-content/50'}`}>
-                            {courseName ? `${courseName} · ` : ''}{due.toLowerCase()}
+                        <div className={`text-[12px] font-medium mt-[2px] truncate ${isCompleted ? 'text-[#A3A3A3] line-through' : 'text-[#737373]'}`}>
+                            {courseName ? `${courseName} - ` : ''}{due}
                         </div>
                     )}
                 </div>
-                {urgent && task.status !== 'COMPLETED' && (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-red-50 text-red-600 shrink-0 uppercase tracking-wide">Urgent</span>
+                {urgent && !isCompleted && (
+                    <span className="bg-[#FEF2F2] text-[#EF4444] px-2 py-[2px] rounded-[6px] text-[10px] font-bold shrink-0">
+                        Urgent
+                    </span>
                 )}
             </div>
         </div>
@@ -124,29 +137,36 @@ const TaskRow = ({ task, courseName, onComplete }: TaskRowProps) => {
 
 interface EventCardProps {
     event: Event;
+    courseName?: string;
 }
 
-const EventCard = ({ event }: EventCardProps) => (
-    <div className={`
-    min-w-64 w-64 shrink-0 bg-base-100 rounded-xl p-4
-    border
-    ${event.type === 'EXAM' || event.type === 'EXAMEN' ? 'border-red-400' : 'border-base-200'}
-  `}>
-        <div className="flex justify-between items-center mb-3">
-            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${eventTypeBadge[event.type] ?? 'bg-gray-100 text-gray-600'}`}>
-                {eventTypeLabel[event.type] ?? event.type}
-            </span>
-            <span className="text-xs text-base-content/50 font-medium">
-                {formatTime(event.startDate)} – {formatTime(event.endDate)}
-            </span>
+const EventCard = ({ event, courseName }: EventCardProps) => {
+    const isExam = event.type === 'EXAM' || event.type === 'EXAMEN';
+    
+    return (
+        <div className={`
+            shrink-0 min-w-[240px] max-w-[280px] bg-[#FAF9F6] border rounded-[16px] p-4 
+            cursor-pointer hover:bg-white transition-colors shadow-sm
+            ${isExam ? 'border-[#991B1B]' : 'border-[#E5E5E5]'}
+        `}>
+            <div className="flex justify-between items-center mb-4">
+                <span className={`px-2 py-[2px] rounded-[6px] text-[10px] font-bold tracking-wider ${eventTypeBadge[event.type] ?? 'bg-[#F3F4F6] text-[#1A1A1A]'}`}>
+                    {eventTypeLabel[event.type] ?? event.type}
+                </span>
+                <span className="text-[12px] font-medium text-[#737373]">
+                    {formatTime(event.startDate)} - {formatTime(event.endDate)}
+                </span>
+            </div>
+            <div className="text-[15px] font-bold text-[#1A1A1A] mb-1 truncate">
+                {courseName ? `${courseName} ` : ''}{event.title && courseName ? `— ${event.title}` : event.title}
+            </div>
+            <div className="text-[12px] font-medium text-[#737373] truncate">
+                {event.location ? `${event.location} - ` : ''}
+                {Math.max(1, Math.round((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60)))}h
+            </div>
         </div>
-        <div className="text-base font-semibold text-base-content mb-1">{event.title}</div>
-        <div className="text-xs text-base-content/50">
-            {event.location ? `${event.location} · ` : ''}
-            {Math.round((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60))}h
-        </div>
-    </div>
-);
+    );
+};
 
 // ─── Page principale ───────────────────────────────────────
 
@@ -159,6 +179,12 @@ export default function DashboardPage() {
     const { data: grades = [] } = useGrades();
     const { mutate: updateTask } = useUpdateTask();
 
+    // Mapping courses
+    const courseDict = courses.reduce((acc, c) => {
+        acc[c.id] = c.name;
+        return acc;
+    }, {} as Record<string, string>);
+
     // Filtres
     const todayEvents = events
         .filter(isTodayEvent)
@@ -167,21 +193,16 @@ export default function DashboardPage() {
     const activeTasks = tasks
         .filter((t) => !t.isDeleted && t.status !== 'COMPLETED' && t.status !== 'CANCELED')
         .sort((a, b) => {
-            // Trier par urgence d'abord, puis par priorité
             const priorityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
             return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
         });
 
-    // Calculs de moyennes et de risques
-    const validGrades = grades.filter((g) => g.score !== undefined && g.maxScore !== undefined);
-    const overallAverage = validGrades.length > 0
-        ? validGrades.reduce((acc, curr) => acc + (curr.score / curr.maxScore) * 20, 0) / validGrades.length
-        : null;
-    
-    // Fake risks for the presentation
-    const riskCoursesCount = 2;
+    // Calculs de moyennes et de risques — entièrement dynamiques
+    const { overallAverage, riskCoursesCount } = useDashboardStats(grades, courses);
 
-    // Cocher / décocher une tâche
+    const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    const dateFormatted = new Date().toLocaleDateString('fr-FR', dateOptions);
+
     const handleComplete = (id: string) => {
         const task = tasks.find((t) => t.id === id);
         if (!task) return;
@@ -194,105 +215,121 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto flex flex-col gap-5">
+        <div className="max-w-[800px] mx-auto flex flex-col px-4 md:px-0 pb-20 pt-2 md:pt-6">
 
             {/* ── HERO ── */}
-            <div className="bg-base-100 rounded-2xl p-6 flex justify-between items-center border border-base-200">
-                <div>
-                    <div className="text-xs text-base-content/50 font-medium mb-1">
-                        {new Date().toLocaleDateString('fr-FR', {
-                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-                        })}
-                    </div>
-                    <div className="text-2xl font-semibold text-base-content mb-1">
-                        Bonjour, {user?.name?.split(' ')[0] ?? 'Lucas'} 👋
-                    </div>
-                    <div className="text-sm text-base-content/50">
-                        {todayEvents.length > 0
-                            ? `${todayEvents.length} événement${todayEvents.length > 1 ? 's' : ''} aujourd'hui`
-                            : "Aucun événement aujourd'hui"
-                        }
-                        {activeTasks.length > 0 && ` · ${activeTasks.length} tâche${activeTasks.length > 1 ? 's' : ''} en cours`}
-                    </div>
-                </div>
-                <div className="flex gap-6 text-center items-center">
-                    <div className="text-right">
-                        <div className="text-3xl font-medium text-base-content">
-                            {overallAverage ? overallAverage.toFixed(1) : '12.4'}
+            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 md:p-8 mb-8 mt-2 md:mt-5 shadow-sm">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <div className="text-[11px] font-bold text-[#737373] mb-2 capitalize">
+                            {dateFormatted}
                         </div>
-                        <div className="text-sm text-base-content/50">Moy. générale</div>
-                    </div>
-                    <div className="w-px h-12 bg-base-200" />
-                    <div className="text-left">
-                        <div className="text-3xl font-medium text-error">
-                            {riskCoursesCount}
+                        <div className="text-[26px] font-bold text-[#1A1A1A] tracking-tight mb-2">
+                            Bonjour, {user?.name?.split(' ')[0] ?? 'Lucas'} !
                         </div>
-                        <div className="text-sm text-base-content/50">Cours à risque</div>
+                        <div className="text-[14px] font-medium text-[#1A1A1A]">
+                            Tu as <span className="font-bold">{todayEvents.length} events</span> aujourd'hui et <span className="font-bold">{activeTasks.length} tâches</span> en cours.
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-6 items-center w-full md:w-auto md:pt-4">
+                        <div className="text-center flex-1 md:flex-none">
+                            <div className="text-[24px] font-bold text-[#1A1A1A] leading-none mb-[2px]">
+                                {overallAverage !== null ? overallAverage.toFixed(1) : '—'}
+                            </div>
+                            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-wide">
+                                Moy. générale
+                            </div>
+                        </div>
+                        <div className="w-[1px] h-10 bg-[#E5E5E5]" />
+                        <div className="text-center flex-1 md:flex-none">
+                            <div className="text-[24px] font-bold text-[#EF4444] leading-none mb-[2px]">
+                                {riskCoursesCount}
+                            </div>
+                            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-wide">
+                                Cours à risque
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* ── EVENTS DU JOUR ── */}
-            <div>
-                <div className="text-xs font-medium text-base-content/40 uppercase tracking-widest mb-3">
+            <div className="mb-6">
+                <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-4 ml-1">
                     Aujourd'hui
                 </div>
+                
                 {eventsLoading ? (
-                    <div className="flex gap-3">
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="min-w-48 h-24 bg-base-100 rounded-xl skeleton" />
+                            <div key={i} className="min-w-[240px] h-[120px] bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] animate-pulse shrink-0" />
                         ))}
                     </div>
                 ) : todayEvents.length === 0 ? (
-                    <div className="bg-base-100 rounded-xl p-4 border border-base-200 text-sm text-base-content/40 text-center">
-                        Aucun événement aujourd'hui
+                    <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 text-center shadow-sm">
+                        <div className="flex justify-center mb-2 opacity-30">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 14h.01"/><path d="M7 7h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+                        </div>
+                        <div className="text-[14px] font-bold text-[#1A1A1A]">Aucun événement aujourd'hui</div>
+                        <div className="text-[12px] font-medium text-[#737373]">Profites-en pour avancer sur tes tâches.</div>
                     </div>
                 ) : (
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                         {todayEvents.map((event) => (
-                            <EventCard key={event.id} event={event} />
+                            <EventCard 
+                                key={event.id} 
+                                event={event} 
+                                courseName={event.courseId ? courseDict[event.courseId] : undefined}
+                            />
                         ))}
                     </div>
                 )}
             </div>
 
             {/* ── TACHES ── */}
-            <div className="bg-[#FAF9F6] rounded-2xl border border-base-200 p-6 shadow-sm">
-
-                {/* Header tâches */}
-                <div className="flex justify-between items-center mb-4">
-                    <div className="text-xs font-bold text-base-content/40 uppercase tracking-widest">
+            <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6 shadow-sm">
+                
+                <div className="flex justify-between items-center mb-2">
+                    <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest">
                         Tâches en cours
                     </div>
                     <button
                         onClick={() => navigate('/tasks')}
-                        className="text-sm font-medium text-base-content/50 hover:text-base-content"
+                        className="text-[12px] font-bold text-[#737373] hover:text-[#1A1A1A] transition-colors flex items-center gap-1"
                     >
-                        Voir tout →
+                        Voir tout <ArrowRight size={14} />
                     </button>
                 </div>
 
-                {/* Liste des tâches */}
                 <div className="flex flex-col">
                     {tasksLoading ? (
-                        <div className="flex flex-col gap-2">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="h-10 skeleton rounded-lg" />
+                        <div className="flex flex-col gap-4 py-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="h-4 w-full bg-[#E5E5E5] rounded animate-pulse" />
                             ))}
                         </div>
                     ) : activeTasks.length === 0 ? (
-                        <div className="text-sm text-base-content/40 text-center py-4">
-                            Aucune tâche en cours 🎉
+                        <div className="text-center py-6">
+                            <div className="text-[13px] font-bold text-[#1A1A1A] mb-1">Tout est à jour !</div>
+                            <div className="text-[12px] font-medium text-[#737373]">Tu n'as aucune tâche en attente.</div>
                         </div>
                     ) : (
-                        activeTasks.slice(0, 5).map((task) => (
-                            <TaskRow 
-                                key={task.id} 
-                                task={task} 
-                                courseName={courses.find(c => c.id === task.courseId)?.name}
-                                onComplete={handleComplete} 
-                            />
-                        ))
+                        activeTasks.slice(0, 5).map((task, idx) => {
+                            const isLast = idx === Math.min(activeTasks.length, 5) - 1;
+                            return (
+                                <TaskRow 
+                                    key={task.id} 
+                                    task={task} 
+                                    courseName={task.courseId ? courseDict[task.courseId] : undefined}
+                                    onComplete={(id) => {
+                                        // Update local state optimistic if we want but api handles it
+                                        handleComplete(id);
+                                    }} 
+                                    isLast={isLast}
+                                />
+                            );
+                        })
                     )}
                 </div>
 

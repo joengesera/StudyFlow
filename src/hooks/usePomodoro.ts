@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useUpdateTask } from './useTasks';
+import { useSyncStore } from '../stores/syncStore';
 
 type PomodoroPhase = 'work' | 'break';
 
@@ -11,64 +12,69 @@ export const usePomodoro = (taskId: string | null) => {
     const [timeLeft, setTimeLeft] = useState(WORK_DURATION);
     const [isRunning, setIsRunning] = useState(false);
     const [sessions, setSessions] = useState(0);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const elapsedRef = useRef(0);
     const { mutate: updateTask } = useUpdateTask();
 
-    // Nettoie l'interval quand le composant se démonte
+    // On stocke taskId et une méthode pour le commit
+    const taskIdRef = useRef(taskId);
     useEffect(() => {
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-    }, []);
+        // Optionnel : ne pas réinitialiser si on est en train de courir ?
+        // Pour l'instant on garde la liaison
+        taskIdRef.current = taskId;
+    }, [taskId]);
 
-    // Lance ou met en pause le timer
+    // Timer effect
     useEffect(() => {
-        if (isRunning) {
-            intervalRef.current = setInterval(() => {
-                setTimeLeft((prev) => {
-                    if (prev <= 1) {
-                        // Timer terminé
-                        handlePhaseEnd();
-                        return 0;
-                    }
-                    if (phase === 'work') {
-                        elapsedRef.current += 1;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        }
+        if (!isRunning) return;
 
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
+        const interval = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) return 0;
+                return prev - 1;
+            });
+            if (phase === 'work') {
+                elapsedRef.current += 1;
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
     }, [isRunning, phase]);
+
+    // Phase end effect
+    useEffect(() => {
+        if (timeLeft === 0 && isRunning) {
+            handlePhaseEnd();
+        }
+    }, [timeLeft, isRunning]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handlePhaseEnd = () => {
         setIsRunning(false);
 
         if (phase === 'work') {
-            // Fin d'une session de travail
             setSessions((prev) => prev + 1);
 
-            // Met à jour timeSpentMinutes sur la tâche
-            if (taskId) {
-                updateTask({
-                    id: taskId,
-                    payload: {
-                        timeSpentMinutes: Math.floor(elapsedRef.current / 60),
-                    },
-                });
+            const currentTaskId = taskIdRef.current;
+            if (currentTaskId) {
+                // On récupère la tâche actuelle pour ne pas écraser le temps passé
+                const currentTask = useSyncStore.getState().cache.tasks.find(t => t.id === currentTaskId);
+                const previousMinutes = currentTask?.timeSpentMinutes ?? 0;
+                const newMinutesToAdd = Math.floor(elapsedRef.current / 60);
+
+                if (newMinutesToAdd > 0) {
+                    updateTask({
+                        id: currentTaskId,
+                        payload: {
+                            timeSpentMinutes: previousMinutes + newMinutesToAdd,
+                        },
+                    });
+                    // On ne réinitialise elapsed que si on a au moins 1 minute à committer
+                    elapsedRef.current = 0;
+                }
             }
 
-            // Passe en pause
             setPhase('break');
             setTimeLeft(BREAK_DURATION);
         } else {
-            // Fin de la pause → retour au travail
             setPhase('work');
             setTimeLeft(WORK_DURATION);
         }
@@ -89,7 +95,6 @@ export const usePomodoro = (taskId: string | null) => {
         handlePhaseEnd();
     };
 
-    // Formate en MM:SS
     const formatted = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`;
 
     const progress = phase === 'work'

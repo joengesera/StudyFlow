@@ -1,237 +1,197 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { useCourse } from '../../hooks/useCourses';
-import { useGrades, useCreateGrade, useDeleteGrade } from '../../hooks/useGrades';
+import { useGrades, useCreateGrade } from '../../hooks/useGrades';
 import { useEvents } from '../../hooks/useEvents';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useRisk } from '../../hooks/useRisks';
+import CourseFormModal from '../../components/Courses/CourseFormModal';
 import type { Grade } from '../../types';
 
+// Tab Definitions
+type Tab = 'notes' | 'travaux' | 'taches' | 'evenements' | 'risque';
+
+// Risk Styles
+const riskStyles = {
+    LOW: { text: "text-[#3B8A44]", bg: "bg-[#E8F2E8]" },
+    MEDIUM: { text: "text-[#A36D16]", bg: "bg-[#F5EDDF]" },
+    HIGH: { text: "text-[#B22A2A]", bg: "bg-[#F5E2E2]" },
+    CRITICAL: { text: "text-[#B22A2A]", bg: "bg-[#F5E2E2]" }
+};
+
 // ─── Helpers ──────────────────────────────────────────────
-
-type Tab = 'notes' | 'taches' | 'evenements' | 'risque';
-
-const riskColor: Record<string, string> = {
-    LOW: 'text-success',
-    MEDIUM: 'text-warning',
-    HIGH: 'text-error',
-    CRITICAL: 'text-purple-500',
+const typeToLabel = (grade: Grade): string => {
+    if (grade.workTypeLabel) return grade.workTypeLabel;
+    const nameStr = grade.name.toLowerCase();
+    if (nameStr.includes('interro')) return 'Interro';
+    if (nameStr.includes('tp')) return 'TP';
+    if (nameStr.includes('projet')) return 'Projet';
+    return 'Examen';
 };
 
-const riskBadge: Record<string, string> = {
-    LOW: 'badge-success',
-    MEDIUM: 'badge-warning',
-    HIGH: 'badge-error',
-    CRITICAL: 'badge-ghost',
+const getBadgeStyle = (label: string) => {
+    if (label === 'Examen') return 'bg-[#FDF2F2] text-[#E74C3C]';
+    if (label === 'Interro') return 'bg-[#EFF6FF] text-[#3B82F6]';
+    if (label === 'TP' || label === 'Projet') return 'bg-[#F0FDF4] text-[#22C55E]';
+    return 'bg-gray-100 text-gray-600';
 };
 
-const scoreColor = (score: number, max: number): string => {
+const getScoreColor = (score: number, max: number) => {
     const ratio = score / max;
-    if (ratio >= 0.7) return 'text-success';
-    if (ratio >= 0.5) return 'text-warning';
-    return 'text-error';
+    if (ratio >= 0.7) return 'text-[#22C55E]';
+    if (ratio >= 0.45) return 'text-[#F59E0B]'; // orange
+    return 'text-[#E74C3C]';
 };
 
-// Calcule la note minimale à obtenir pour atteindre l'objectif
-const simulateGrade = (
-    grades: Grade[],
-    target: number,
-    nextWeight: number = 1
-): number | null => {
+const simulateGrade = (grades: Grade[], target: number, nextWeight: number = 1): number | null => {
     if (grades.length === 0) return target;
     const totalWeight = grades.reduce((sum, g) => sum + (g.weight ?? 1), 0) + nextWeight;
-    const currentSum = grades.reduce(
-        (sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1),
-        0
-    );
+    const currentSum = grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0);
     const needed = (target * totalWeight - currentSum) / nextWeight;
     return Math.round(needed * 100) / 100;
 };
 
 // ─── Onglet Notes ──────────────────────────────────────────
 
-interface NotesTabProps {
-    courseId: string;
-}
-
-const NotesTab = ({ courseId }: NotesTabProps) => {
+const NotesTab = ({ courseId }: { courseId: string }) => {
     const { data: grades = [], isLoading } = useGrades(courseId);
     const { mutate: createGrade, isPending: isCreating } = useCreateGrade();
-    const { mutate: deleteGrade } = useDeleteGrade();
     const [showForm, setShowForm] = useState(false);
-    const [simulatorTarget, setSimulatorTarget] = useState(10);
-    const [form, setForm] = useState({
-        name: '',
-        score: '',
-        maxScore: '20',
-        weight: '1',
-    });
+    const [simulatorTarget, setSimulatorTarget] = useState<number | ''>(10);
+    const [form, setForm] = useState({ name: '', score: '', maxScore: '20', weight: '1', workTypeLabel: 'Examen' });
 
-    const average =
-        grades.length === 0
-            ? null
-            : grades.reduce(
-                (sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1),
-                0
-            ) / grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
+    const average = grades.length === 0 ? null :
+        grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0) /
+        grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
 
-    const needed = simulateGrade(grades, simulatorTarget);
+    const needed = simulateGrade(grades, Number(simulatorTarget));
 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
         createGrade(
-            {
-                name: form.name,
-                score: Number(form.score),
-                maxScore: Number(form.maxScore),
-                weight: Number(form.weight),
-                courseId,
-            },
-            { onSuccess: () => { setShowForm(false); setForm({ name: '', score: '', maxScore: '20', weight: '1' }); } }
+            { ...form, score: Number(form.score), maxScore: Number(form.maxScore), weight: Number(form.weight), courseId },
+            { onSuccess: () => { setShowForm(false); setForm({ name: '', score: '', maxScore: '20', weight: '1', workTypeLabel: 'Examen' }); } }
         );
     };
 
-    if (isLoading) return <div className="skeleton h-40 rounded-xl" />;
+    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse" />;
 
     return (
-        <div className="flex flex-col gap-4">
-
-            {/* Header */}
-            <div className="flex justify-between items-center">
-                <div className="text-sm text-base-content/50">
-                    Moyenne pondérée :{' '}
-                    <strong className={`text-base-content ${average !== null ? scoreColor(average, 20) : ''}`}>
-                        {average !== null ? `${average.toFixed(1)} / 20` : '—'}
-                    </strong>
+        <div className="flex flex-col gap-5 mt-5">
+            {/* Notes Header Section */}
+            <div className="flex justify-between items-end mb-2">
+                <div>
+                    <div className="text-[11px] font-bold text-[#A3A3A3] uppercase tracking-wider mb-2">
+                        Notes du cours
+                    </div>
+                    <div className="text-[14px] font-medium text-[#737373]">
+                        Moyenne pondérée : <span className="text-[#1A1A1A] font-bold">{average !== null ? `${average.toFixed(1)} / 20` : '— / 20'}</span>
+                    </div>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="btn btn-neutral btn-xs"
+                    className="bg-white border border-[#E5E5E5] text-[#1A1A1A] rounded-xl text-[14px] font-medium px-4 py-2 hover:bg-gray-50 flex items-center gap-2 transition-colors shadow-sm"
                 >
                     + Ajouter une note
                 </button>
             </div>
 
-            {/* Formulaire ajout */}
+            {/* Ajout Form dropdown */}
             {showForm && (
-                <form
-                    onSubmit={handleCreate}
-                    className="bg-base-200 rounded-xl p-4 flex flex-col gap-3"
-                >
-                    <div className="flex gap-3">
-                        <div className="flex-1">
-                            <label className="text-xs text-base-content/50 mb-1 block">Nom</label>
-                            <input
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                placeholder="ex: Examen final"
-                                required
-                                className="input input-bordered input-xs w-full"
-                            />
+                <form onSubmit={handleCreate} className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[20px] p-5 flex flex-col gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div className="col-span-2">
+                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Nom</label>
+                            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
                         </div>
-                        <div className="w-20">
-                            <label className="text-xs text-base-content/50 mb-1 block">Note</label>
-                            <input
-                                type="number"
-                                value={form.score}
-                                onChange={(e) => setForm({ ...form, score: e.target.value })}
-                                placeholder="12"
-                                required
-                                min={0}
-                                className="input input-bordered input-xs w-full"
-                            />
+                        <div>
+                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Note</label>
+                            <input type="number" step="0.5" value={form.score} onChange={(e) => setForm({ ...form, score: e.target.value })} required min={0} className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
                         </div>
-                        <div className="w-20">
-                            <label className="text-xs text-base-content/50 mb-1 block">Sur</label>
-                            <input
-                                type="number"
-                                value={form.maxScore}
-                                onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
-                                min={1}
-                                className="input input-bordered input-xs w-full"
-                            />
+                        <div>
+                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Sur</label>
+                            <input type="number" value={form.maxScore} onChange={(e) => setForm({ ...form, maxScore: e.target.value })} min={1} className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
                         </div>
-                        <div className="w-20">
-                            <label className="text-xs text-base-content/50 mb-1 block">Coeff.</label>
-                            <input
-                                type="number"
-                                value={form.weight}
-                                onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                                min={0.5}
-                                step={0.5}
-                                className="input input-bordered input-xs w-full"
-                            />
+                        <div>
+                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Coeff.</label>
+                            <input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} min={0.5} step="0.5" className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost btn-xs">
-                            Annuler
-                        </button>
-                        <button type="submit" disabled={isCreating} className="btn btn-neutral btn-xs">
-                            {isCreating ? <span className="loading loading-spinner loading-xs" /> : 'Enregistrer'}
+                    <div className="flex justify-end gap-3 mt-2">
+                        <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-[14px] text-[#737373] font-medium hover:text-[#1A1A1A]">Annuler</button>
+                        <button type="submit" disabled={isCreating} className="bg-[#1A1A1A] text-white px-5 py-2 rounded-xl text-[14px] font-medium hover:bg-black">
+                            {isCreating ? 'En cours...' : 'Enregistrer'}
                         </button>
                     </div>
                 </form>
             )}
 
-            {/* Liste notes */}
+            {/* Notes List */}
             {grades.length === 0 ? (
-                <div className="text-sm text-base-content/40 text-center py-8">
-                    Aucune note pour ce cours
+                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px]">
+                    Aucune note enregistrée.
                 </div>
             ) : (
-                <div className="bg-base-100 rounded-xl border border-base-200 overflow-hidden">
-                    {grades.map((grade, i) => (
-                        <div
-                            key={grade.id}
-                            className={`flex items-center gap-4 px-5 py-3 ${i < grades.length - 1 ? 'border-b border-base-200' : ''}`}
-                        >
-                            <div className="flex-1">
-                                <div className="text-sm text-base-content">{grade.name}</div>
-                                <div className="text-xs text-base-content/40 mt-0.5">
-                                    Coeff. {grade.weight ?? 1}
-                                    {grade.date ? ` · ${new Date(grade.date).toLocaleDateString('fr-FR')}` : ''}
+                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] flex flex-col pt-2 pb-2">
+                    {grades.map((grade, i) => {
+                        const typeLabel = typeToLabel(grade);
+                        const bStyle = getBadgeStyle(typeLabel);
+                        const numScoreColor = getScoreColor(grade.score, grade.maxScore);
+
+                        return (
+                            <div key={grade.id} className={`flex justify-between items-center px-6 py-4 ${i < grades.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
+                                <div>
+                                    <div className="text-[15px] font-bold text-[#1A1A1A] mb-1">{grade.name}</div>
+                                    <div className="text-[13px] text-[#737373]">
+                                        {typeLabel} · coeff. {grade.weight ?? 1}{grade.date ? ` ·  ${new Date(grade.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '')}` : ''}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className={`px-2.5 py-0.5 rounded text-[12px] font-bold tracking-wide ${bStyle}`}>
+                                        {typeLabel}
+                                    </div>
+                                    <div className={`text-[17px] font-bold w-20 text-right ${numScoreColor}`}>
+                                        {grade.score} / {grade.maxScore}
+                                    </div>
+                                    <button className="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] rounded-lg hover:bg-white transition-colors">
+                                        {/* Crayon rouge ico */}
+                                        <svg className="w-3.5 h-3.5 text-[#E74C3C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
-                            <div className={`text-base font-medium ${scoreColor(grade.score, grade.maxScore)}`}>
-                                {grade.score} / {grade.maxScore}
-                            </div>
-                            <button
-                                onClick={() => deleteGrade(grade.id)}
-                                className="btn btn-ghost btn-xs text-base-content/30 hover:text-error"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
-            {/* Simulateur */}
-            <div className="bg-base-200 rounded-xl p-4">
-                <div className="text-xs text-base-content/50 mb-3 font-medium">
-                    Simulateur de moyenne
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-sm text-base-content/60">Objectif :</span>
+            {/* Simulateur Container */}
+            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 mt-2">
+                <div className="text-[15px] font-bold text-[#1A1A1A] mb-2">Simulateur de moyenne</div>
+                <div className="text-[15px] text-[#737373] mb-5">Quelle note faut-il avoir au prochain examen pour atteindre {simulatorTarget || 10} / 20 ?</div>
+                
+                <div className="flex items-center gap-4">
+                    <span className="text-[15px] text-[#1A1A1A]">Objectif :</span>
                     <input
                         type="number"
-                        value={simulatorTarget}
-                        onChange={(e) => setSimulatorTarget(Number(e.target.value))}
-                        min={0}
-                        max={20}
-                        className="input input-bordered input-xs w-16 text-center"
+                        min="0"
+                        max="20"
+                        step="0.5"
+                        value={simulatorTarget === '' ? '' : simulatorTarget}
+                        onChange={(e) => setSimulatorTarget(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-[70px] h-[44px] border border-[#E5E5E5] bg-[#FAF9F6] rounded-xl text-center text-[15px] font-medium outline-none focus:border-[#A3A3A3] transition-colors"
                     />
-                    <span className="text-sm text-base-content/60">/ 20 → il te faut au moins</span>
-                    <span className={`text-base font-medium ${needed !== null ? scoreColor(needed, 20) : ''}`}>
-                        {needed !== null
-                            ? needed > 20
-                                ? 'Impossible 😔'
-                                : needed < 0
-                                    ? 'Déjà atteint 🎉'
+                    <span className="text-[15px] text-[#1A1A1A] ml-2">→ Il te faut au moins</span>
+                    <span className="text-[17px] font-bold text-[#1A1A1A]">
+                        {needed !== null 
+                            ? needed > 20 
+                                ? 'Impossible — trop haut' 
+                                : needed < 0 
+                                    ? 'Déjà atteint !' 
                                     : `${needed} / 20`
-                            : '—'
-                        }
+                            : '— / 20'}
                     </span>
                 </div>
             </div>
@@ -240,66 +200,50 @@ const NotesTab = ({ courseId }: NotesTabProps) => {
     );
 };
 
-// ─── Onglet Tâches ─────────────────────────────────────────
-
-interface TasksTabProps {
-    courseId: string;
-}
-
-const TasksTab = ({ courseId }: TasksTabProps) => {
+const TasksTab = ({ courseId }: { courseId: string }) => {
     const { data: tasks = [], isLoading } = useTasks();
     const { mutate: updateTask } = useUpdateTask();
 
-    const courseTasks = tasks.filter(
-        (t) => t.courseId === courseId && !t.isDeleted
-    );
+    const courseTasks = tasks.filter((t) => t.courseId === courseId && !t.isDeleted);
 
-    if (isLoading) return <div className="skeleton h-40 rounded-xl" />;
+    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse mt-5" />;
 
     if (courseTasks.length === 0) {
         return (
-            <div className="text-sm text-base-content/40 text-center py-8">
-                Aucune tâche pour ce cours
+            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-5">
+                Aucune tâche pour ce cours.
             </div>
         );
     }
 
     return (
-        <div className="bg-base-100 rounded-xl border border-base-200 overflow-hidden">
+        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] flex flex-col pt-2 pb-2 mt-5">
             {courseTasks.map((task, i) => (
-                <div
-                    key={task.id}
-                    className={`flex items-center gap-3 px-5 py-3 ${i < courseTasks.length - 1 ? 'border-b border-base-200' : ''}`}
-                >
+                <div key={task.id} className={`flex items-center gap-4 px-6 py-4 ${i < courseTasks.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
                     <input
                         type="checkbox"
-                        className="checkbox checkbox-sm"
+                        className="w-5 h-5 rounded border-gray-300 text-[#1A1A1A] focus:ring-[#1A1A1A] cursor-pointer"
                         checked={task.status === 'COMPLETED'}
-                        onChange={() =>
-                            updateTask({
-                                id: task.id,
-                                payload: {
-                                    status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED',
-                                },
-                            })
-                        }
+                        onChange={() => updateTask({ id: task.id, payload: { status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED' } })}
                     />
                     <div className="flex-1">
-                        <div className={`text-sm ${task.status === 'COMPLETED' ? 'line-through text-base-content/30' : 'text-base-content'}`}>
+                        <div className={`text-[15px] font-bold ${task.status === 'COMPLETED' ? 'line-through text-[#A3A3A3]' : 'text-[#1A1A1A]'}`}>
                             {task.title}
                         </div>
                         {task.dueDate && (
-                            <div className="text-xs text-base-content/40 mt-0.5">
+                            <div className="text-[13px] text-[#737373] mt-0.5">
                                 {new Date(task.dueDate).toLocaleDateString('fr-FR')}
                             </div>
                         )}
                     </div>
-                    <span className={`badge badge-xs ${task.priority === 'CRITICAL' ? 'badge-ghost' :
-                            task.priority === 'HIGH' ? 'badge-error' :
-                                task.priority === 'MEDIUM' ? 'badge-warning' : 'badge-success'
-                        }`}>
+                    <div className={`px-2.5 py-0.5 rounded text-[12px] font-bold tracking-wide ${
+                        task.priority === 'CRITICAL' ? 'bg-[#FDF2F2] text-[#E74C3C]' :
+                        task.priority === 'HIGH' ? 'bg-[#FFF3E0] text-[#F97316]' :
+                        task.priority === 'MEDIUM' ? 'bg-[#FEF9C3] text-[#EAB308]' :
+                        'bg-[#F0FDF4] text-[#22C55E]'
+                    }`}>
                         {task.priority}
-                    </span>
+                    </div>
                 </div>
             ))}
         </div>
@@ -308,55 +252,41 @@ const TasksTab = ({ courseId }: TasksTabProps) => {
 
 // ─── Onglet Événements ─────────────────────────────────────
 
-interface EventsTabProps {
-    courseId: string;
-}
-
-const EventsTab = ({ courseId }: EventsTabProps) => {
+const EventsTab = ({ courseId }: { courseId: string }) => {
     const { data: events = [], isLoading } = useEvents();
 
     const courseEvents = events
         .filter((e) => e.courseId === courseId)
         .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
-    if (isLoading) return <div className="skeleton h-40 rounded-xl" />;
+    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse mt-5" />;
 
     if (courseEvents.length === 0) {
         return (
-            <div className="text-sm text-base-content/40 text-center py-8">
-                Aucun événement pour ce cours
+            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-5">
+                Aucun événement pour ce cours.
             </div>
         );
     }
 
     return (
-        <div className="bg-base-100 rounded-xl border border-base-200 overflow-hidden">
+        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] flex flex-col pt-2 pb-2 mt-5">
             {courseEvents.map((event, i) => (
-                <div
-                    key={event.id}
-                    className={`flex items-center gap-4 px-5 py-3 ${i < courseEvents.length - 1 ? 'border-b border-base-200' : ''}`}
-                >
-                    <div
-                        className="w-1 self-stretch rounded-full shrink-0"
-                        style={{ background: '#3B82F6' }}
-                    />
+                <div key={event.id} className={`flex items-center gap-4 px-6 py-4 ${i < courseEvents.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
+                    <div className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: '#1A1A1A' }} />
                     <div className="flex-1">
-                        <div className="text-sm text-base-content">{event.title}</div>
-                        <div className="text-xs text-base-content/40 mt-0.5">
-                            {new Date(event.startDate).toLocaleDateString('fr-FR', {
-                                weekday: 'short', day: 'numeric', month: 'short',
-                            })}
+                        <div className="text-[15px] font-bold text-[#1A1A1A]">{event.title}</div>
+                        <div className="text-[13px] text-[#737373] mt-0.5">
+                            {new Date(event.startDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                             {' · '}
-                            {new Date(event.startDate).toLocaleTimeString('fr-FR', {
-                                hour: '2-digit', minute: '2-digit',
-                            })}
+                            {new Date(event.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             {' – '}
-                            {new Date(event.endDate).toLocaleTimeString('fr-FR', {
-                                hour: '2-digit', minute: '2-digit',
-                            })}
+                            {new Date(event.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                     </div>
-                    <span className="badge badge-xs badge-info">{event.type}</span>
+                    <div className="px-2.5 py-0.5 rounded text-[12px] font-bold tracking-wide bg-[#F3F4F6] text-[#4B5563]">
+                        {event.type}
+                    </div>
                 </div>
             ))}
         </div>
@@ -365,19 +295,15 @@ const EventsTab = ({ courseId }: EventsTabProps) => {
 
 // ─── Onglet Risque ─────────────────────────────────────────
 
-interface RiskTabProps {
-    courseId: string;
-}
-
-const RiskTab = ({ courseId }: RiskTabProps) => {
+const RiskTab = ({ courseId }: { courseId: string }) => {
     const { data: risk, isLoading } = useRisk(courseId);
 
-    if (isLoading) return <div className="skeleton h-40 rounded-xl" />;
+    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse mt-5" />;
 
     if (!risk) {
         return (
-            <div className="text-sm text-base-content/40 text-center py-8">
-                Données insuffisantes pour calculer le risque
+            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-5">
+                Données insuffisantes pour calculer le risque.
             </div>
         );
     }
@@ -388,141 +314,198 @@ const RiskTab = ({ courseId }: RiskTabProps) => {
         { label: 'Pression examen', value: risk.details.pressure },
     ];
 
+    const riskLevel = risk.level || 'LOW';
+    const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
+
     return (
-        <div className="flex flex-col gap-4">
-
-            {/* Score global */}
-            <div className="bg-base-100 rounded-xl border border-base-200 p-5">
-                <div className="flex justify-between items-center mb-4">
-                    <div>
-                        <div className="text-sm text-base-content/50 mb-1">Score de risque</div>
-                        <div className={`text-3xl font-medium ${riskColor[risk.level]}`}>
-                            {risk.overallScore}
-                            <span className="text-base text-base-content/30 ml-1">/ 100</span>
-                        </div>
+        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 mt-5 flex flex-col gap-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <div className="text-[13px] text-[#737373] font-medium mb-1">Score de risque global</div>
+                    <div className={`text-[36px] font-bold ${rStyle.text} leading-none`}>
+                        {risk.overallScore}
+                        <span className="text-[17px] text-[#A3A3A3] ml-1">/ 100</span>
                     </div>
-                    <span className={`badge ${riskBadge[risk.level]}`}>{risk.level}</span>
                 </div>
-
-                {/* Facteurs */}
-                <div className="flex flex-col gap-3">
-                    {factors.map((f) => (
-                        <div key={f.label}>
-                            <div className="flex justify-between text-xs text-base-content/50 mb-1">
-                                <span>{f.label}</span>
-                                <span>{f.value}</span>
-                            </div>
-                            <div className="h-1.5 bg-base-200 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full"
-                                    style={{
-                                        width: `${f.value}%`,
-                                        background: f.value >= 70 ? '#E24B4A' : f.value >= 40 ? '#EF9F27' : '#639922',
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    ))}
+                <div className={`px-3 py-1 rounded-lg text-[13px] font-bold tracking-widest uppercase ${rStyle.bg} ${rStyle.text}`}>
+                    {risk.level}
                 </div>
             </div>
 
+            <div className="flex flex-col gap-4">
+                {factors.map((f) => (
+                    <div key={f.label}>
+                        <div className="flex justify-between items-end mb-1.5">
+                            <span className="text-[14px] text-[#737373] font-medium">{f.label}</span>
+                            <span className="text-[14px] font-bold text-[#1A1A1A]">{f.value}%</span>
+                        </div>
+                        <div className="h-2 bg-[#E5E5E5] rounded-full overflow-hidden">
+                            <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${f.value}%`,
+                                    background: f.value >= 70 ? '#E74C3C' : f.value >= 40 ? '#F59E0B' : '#22C55E'
+                                }}
+                            />
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
 
-// ─── Page principale ───────────────────────────────────────
+// ─── Onglets génériques pour le moment ─────────────────────
+
+const placeholderSection = (text: string) => (
+    <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-6">
+        {text}
+    </div>
+);
+
+// ─── Page principale (Détails) ─────────────────────────────
 
 export default function CourseDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<Tab>('notes');
+    const [showEditModal, setShowEditModal] = useState(false);
 
     const { data: course, isLoading } = useCourse(id ?? '');
+    const { data: grades = [] } = useGrades(id ?? '');
+    const { data: tasks = [] } = useTasks();
+    const { data: risk } = useRisk(id ?? '');
 
-    if (isLoading) {
-        return (
-            <div className="max-w-3xl mx-auto flex flex-col gap-4">
-                <div className="skeleton h-8 w-48 rounded-lg" />
-                <div className="skeleton h-28 rounded-xl" />
-            </div>
-        );
-    }
+    const courseTasks = tasks.filter(t => t.courseId === id && !t.isDeleted);
+    
+    // Average
+    const average = grades.length === 0 ? null :
+        grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0) /
+        grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
 
+    const riskLevel = risk?.level || 'LOW';
+    const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
+
+    if (isLoading) return <div className="max-w-4xl mx-auto h-[300px] bg-gray-50 rounded-[20px] animate-pulse" />;
+    
     if (!course) {
         return (
-            <div className="text-center py-16 text-base-content/40">
-                <div className="text-4xl mb-3">🔍</div>
+            <div className="text-center py-16 text-[#737373]">
+                <div className="flex justify-center mb-3">
+                    <Search size={36} className="opacity-20" />
+                </div>
                 <div className="text-sm">Cours introuvable</div>
-                <button onClick={() => navigate('/courses')} className="btn btn-ghost btn-sm mt-4">
-                    ← Retour aux cours
-                </button>
+                <button onClick={() => navigate('/courses')} className="mt-4 text-[#1A1A1A] underline">← Retour aux cours</button>
             </div>
         );
     }
 
     const tabs: { key: Tab; label: string }[] = [
         { key: 'notes', label: 'Notes' },
+        { key: 'travaux', label: 'Travaux' },
         { key: 'taches', label: 'Tâches' },
         { key: 'evenements', label: 'Événements' },
         { key: 'risque', label: 'Risque' },
     ];
 
     return (
-        <div className="max-w-3xl mx-auto flex flex-col gap-5">
+        <div className="max-w-[900px] mx-auto pb-10 px-2 lg:px-4">
 
-            {/* Retour */}
+            {/* Back action */}
             <button
                 onClick={() => navigate('/courses')}
-                className="text-xs text-base-content/40 hover:text-base-content w-fit"
+                className="text-[14px] font-medium text-[#737373] hover:text-[#1A1A1A] transition-colors mb-4 flex items-center gap-1.5"
             >
                 ← Mes cours
             </button>
 
-            {/* Header cours */}
-            <div className="bg-base-100 rounded-2xl border border-base-200 p-6">
-                <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                        <div
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ background: course.color }}
-                        />
-                        <div>
-                            <h1 className="text-xl font-medium text-base-content">{course.name}</h1>
-                            <div className="text-xs text-base-content/40 mt-1">
-                                {course.code} · {course.credits ?? 3} crédits
-                            </div>
-                        </div>
+            {/* Title Section */}
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: course.color }} />
+                        <h1 className="text-[26px] font-semibold text-[#1A1A1A] tracking-tight">{course.name}</h1>
                     </div>
-                    <button className="btn btn-ghost btn-xs">Modifier</button>
+                    <div className="text-[14px] text-[#737373] font-medium ml-6.5">
+                        {course.code} · {course.credits ?? 3} crédits
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-widest uppercase ${rStyle.bg} ${rStyle.text}`}>
+                        {riskLevel}
+                    </div>
+                    <button 
+                        onClick={() => setShowEditModal(true)}
+                        className="bg-white border border-[#E5E5E5] text-[#1A1A1A] text-[15px] font-medium rounded-xl px-5 py-2 hover:bg-gray-50 transition-colors shadow-sm"
+                    >
+                        Modifier
+                    </button>
                 </div>
             </div>
 
-            {/* Onglets */}
-            <div className="flex gap-1 border-b border-base-200 overflow-x-auto">
+            {/* Top 4 Stats Columns */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                {/* Moyenne */}
+                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
+                    <div className="text-[26px] font-medium text-[#1A1A1A] leading-tight">
+                        {average !== null ? average.toFixed(1) : '-'}
+                    </div>
+                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Moyenne</div>
+                </div>
+                {/* Notes */}
+                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
+                    <div className="text-[26px] font-medium text-[#1A1A1A] leading-tight">
+                        {grades.length}
+                    </div>
+                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Notes</div>
+                </div>
+                {/* Tâches */}
+                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
+                    <div className="text-[26px] font-medium text-[#1A1A1A] leading-tight">
+                        {courseTasks.length}
+                    </div>
+                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Tâches</div>
+                </div>
+                {/* Score risque */}
+                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
+                    <div className="text-[26px] font-medium text-[#E74C3C] leading-tight">
+                        {Math.round(risk?.overallScore || 0)}
+                    </div>
+                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Score risque</div>
+                </div>
+            </div>
+
+            {/* Nav Tabs */}
+            <div className="flex border-b border-[#E5E5E5] overflow-x-auto select-none no-scrollbar">
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
-                        className={`
-              px-4 py-2 text-sm whitespace-nowrap border-b-2 transition-colors
-              ${activeTab === tab.key
-                                ? 'border-base-content text-base-content font-medium'
-                                : 'border-transparent text-base-content/40 hover:text-base-content'
-                            }
-            `}
+                        className={`px-5 py-3 text-[15px] font-medium transition-colors border-b-2 whitespace-nowrap ${
+                            activeTab === tab.key 
+                            ? 'text-[#1A1A1A] border-[#1A1A1A]' 
+                            : 'text-[#737373] border-transparent hover:text-[#1A1A1A]'
+                        }`}
                     >
                         {tab.label}
                     </button>
                 ))}
+                {/* Espace flexible pour aller jusqu'au bout */}
+                <div className="flex-1"></div>
             </div>
 
-            {/* Contenu onglet actif */}
+            {/* Tab content */}
             <div>
                 {activeTab === 'notes' && <NotesTab courseId={id ?? ''} />}
+                {activeTab === 'travaux' && placeholderSection("L'onglet Travaux sera bientôt implémenté.")}
                 {activeTab === 'taches' && <TasksTab courseId={id ?? ''} />}
                 {activeTab === 'evenements' && <EventsTab courseId={id ?? ''} />}
                 {activeTab === 'risque' && <RiskTab courseId={id ?? ''} />}
             </div>
+
+            {showEditModal && course && (
+                <CourseFormModal course={course} onClose={() => setShowEditModal(false)} />
+            )}
 
         </div>
     );

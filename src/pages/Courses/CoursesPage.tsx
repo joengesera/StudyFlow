@@ -1,283 +1,174 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCourses, useCreateCourse, useDeleteCourse } from '../../hooks/useCourses';
-import type { Course } from '../../types';
+import { useCourses } from '../../hooks/useCourses';
+import { useGrades } from '../../hooks/useGrades';
+import { useTasks } from '../../hooks/useTasks';
+import { useEvents } from '../../hooks/useEvents';
+import { useRisk } from '../../hooks/useRisks';
+import type { Course, Task, Event } from '../../types';
+import CourseFormModal from '../../components/Courses/CourseFormModal';
 
 // ─── Helpers ──────────────────────────────────────────────
-
-const COLORS = [
-    '#3B82F6', '#F59E0B', '#10B981',
-    '#8B5CF6', '#EF4444', '#EC4899', '#14B8A6',
-];
+const riskStyles = {
+    LOW: { text: "text-[#3B8A44]", bg: "bg-[#E8F2E8]" },
+    MEDIUM: { text: "text-[#A36D16]", bg: "bg-[#F5EDDF]" },
+    HIGH: { text: "text-[#B22A2A]", bg: "bg-[#F5E2E2]" },
+    CRITICAL: { text: "text-[#B22A2A]", bg: "bg-[#F5E2E2]" }
+};
 
 // ─── Composant carte cours ─────────────────────────────────
 
 interface CourseCardProps {
     course: Course;
-    onDelete: (id: string) => void;
+    tasks: Task[];
+    events: Event[];
     onClick: (id: string) => void;
 }
 
-const CourseCard = ({ course, onClick, onDelete }: CourseCardProps) => (
-    <div
-        className="bg-white border border-gray-100 shadow-sm rounded-2xl p-5 cursor-pointer hover:shadow-md transition-all"
-        onClick={() => onClick(course.id)}
-    >
-        <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center gap-2">
-                <div
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ background: course.color }}
-                />
-                <div className="font-medium text-sm text-base-content">{course.name}</div>
-            </div>
-            <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(course.id);
-                }}
-                className="btn btn-ghost btn-xs text-base-content/30 hover:text-error"
-            >
-                ✕
-            </button>
-        </div>
-        <div className="text-xs text-base-content/40 mb-4">
-            {course.code} · {course.credits ?? 3} crédits
-        </div>
-        <div
-            className="h-1 rounded-full bg-base-200 overflow-hidden"
-        >
-            <div
-                className="h-full rounded-full"
-                style={{ width: '50%', background: course.color }}
-            />
-        </div>
-    </div>
-);
+const CourseCard = ({ course, tasks, events, onClick }: CourseCardProps) => {
+    const { data: grades = [] } = useGrades(course.id);
+    const { data: risk } = useRisk(course.id);
 
-// ─── Modal création cours ──────────────────────────────────
+    const courseTasks = tasks.filter(t => t.courseId === course.id && !t.isDeleted);
+    const courseEvents = events.filter(e => e.courseId === course.id);
 
-interface CreateCourseModalProps {
-    onClose: () => void;
-    onCreate: (payload: Partial<Course>) => void;
-    isLoading: boolean;
-}
+    const average = grades.length === 0 ? null :
+        grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0) /
+        grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
 
-const CreateCourseModal = ({ onClose, onCreate, isLoading }: CreateCourseModalProps) => {
-    const [form, setForm] = useState({
-        name: '',
-        code: '',
-        credits: 3,
-        color: COLORS[0],
-        description: '',
-    });
+    const riskLevel = risk?.level || 'LOW';
+    const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onCreate({
-            ...form,
-            credits: Number(form.credits),
-        });
-    };
+    const progressValue = average !== null ? (average / 20) * 100 : 0;
 
     return (
-        <dialog open className="modal modal-open">
-            <div className="modal-box max-w-md">
-
-                <h3 className="font-medium text-base mb-5">Nouveau cours</h3>
-
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-
-                    <div className="flex gap-3">
-                        <div className="flex-1">
-                            <label className="text-xs text-base-content/50 mb-1 block">Nom du cours</label>
-                            <input
-                                name="name"
-                                value={form.name}
-                                onChange={handleChange}
-                                placeholder="ex: Algorithmique"
-                                required
-                                className="input input-bordered input-sm w-full"
-                            />
-                        </div>
-                        <div className="w-28">
-                            <label className="text-xs text-base-content/50 mb-1 block">Code</label>
-                            <input
-                                name="code"
-                                value={form.code}
-                                onChange={handleChange}
-                                placeholder="ALGO201"
-                                required
-                                className="input input-bordered input-sm w-full"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                        <div className="w-24">
-                            <label className="text-xs text-base-content/50 mb-1 block">Crédits</label>
-                            <input
-                                name="credits"
-                                type="number"
-                                min={1}
-                                max={10}
-                                value={form.credits}
-                                onChange={handleChange}
-                                className="input input-bordered input-sm w-full"
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="text-xs text-base-content/50 mb-1 block">Couleur</label>
-                            <div className="flex gap-2 pt-1">
-                                {COLORS.map((c) => (
-                                    <button
-                                        key={c}
-                                        type="button"
-                                        onClick={() => setForm((prev) => ({ ...prev, color: c }))}
-                                        className="w-6 h-6 rounded-full shrink-0 transition-transform"
-                                        style={{
-                                            background: c,
-                                            outline: form.color === c ? `2px solid ${c}` : 'none',
-                                            outlineOffset: '2px',
-                                            transform: form.color === c ? 'scale(1.2)' : 'scale(1)',
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="text-xs text-base-content/50 mb-1 block">Description (optionnel)</label>
-                        <textarea
-                            name="description"
-                            value={form.description}
-                            onChange={handleChange}
-                            placeholder="Quelques mots sur ce cours..."
-                            className="textarea textarea-bordered textarea-sm w-full"
-                            rows={2}
-                        />
-                    </div>
-
-                    <div className="flex justify-end gap-2 mt-2">
-                        <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
-                            Annuler
-                        </button>
-                        <button type="submit" disabled={isLoading} className="btn btn-neutral btn-sm">
-                            {isLoading
-                                ? <span className="loading loading-spinner loading-xs" />
-                                : 'Créer le cours'
-                            }
-                        </button>
-                    </div>
-
-                </form>
-
+        <div
+            className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[20px] p-5 cursor-pointer hover:shadow-md transition-all flex flex-col relative min-h-[170px]"
+            onClick={() => onClick(course.id)}
+        >
+            {/* Header */}
+            <div className="flex justify-between items-start mb-1">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: course.color }} />
+                    <div className="font-bold text-[17px] text-[#1A1A1A] tracking-tight">{course.name}</div>
+                </div>
+                <div className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-widest uppercase ${rStyle.bg} ${rStyle.text}`}>
+                    {riskLevel}
+                </div>
             </div>
-            <div className="modal-backdrop" onClick={onClose} />
-        </dialog>
+
+            {/* Subtitle */}
+            <div className="text-[13px] text-[#737373] mb-5 font-medium">
+                {course.code} · {course.credits ?? 3} crédits
+            </div>
+
+            {/* Stats Row */}
+            <div className="flex items-center text-center mt-auto mb-5 px-1">
+                <div className="flex-1">
+                    <div className="text-[19px] font-bold text-[#1A1A1A]">{average !== null ? average.toFixed(1) : '-'}</div>
+                    <div className="text-[11px] text-[#737373] font-medium mt-0.5">Moyenne</div>
+                </div>
+                <div className="w-px h-8 bg-[#E5E5E5]" />
+                <div className="flex-1">
+                    <div className="text-[19px] font-bold text-[#1A1A1A]">{grades.length}</div>
+                    <div className="text-[11px] text-[#737373] font-medium mt-0.5">Notes</div>
+                </div>
+                <div className="w-px h-8 bg-[#E5E5E5]" />
+                <div className="flex-1">
+                    <div className="text-[19px] font-bold text-[#1A1A1A]">{courseTasks.length}</div>
+                    <div className="text-[11px] text-[#737373] font-medium mt-0.5">Tâches</div>
+                </div>
+                <div className="w-px h-8 bg-[#E5E5E5]" />
+                <div className="flex-1">
+                    <div className="text-[19px] font-bold text-[#1A1A1A]">{courseEvents.length}</div>
+                    <div className="text-[11px] text-[#737373] font-medium mt-0.5">Events</div>
+                </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="h-1.5 rounded-full bg-[#E5E5E5] overflow-hidden mt-auto mx-1">
+                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressValue}%`, background: course.color }} />
+            </div>
+        </div>
     );
 };
+
+// ─── Add Course Component ──────────────────────────────────
+
+const AddCourseCard = ({ onClick }: { onClick: () => void }) => (
+    <div
+        onClick={onClick}
+        className="border border-dashed border-[#D4D4D4] rounded-[20px] p-5 cursor-pointer hover:bg-gray-50 transition-all flex flex-col items-center justify-center min-h-[170px]"
+    >
+        <div className="text-2xl text-[#737373] mb-2 font-light">+</div>
+        <div className="text-[14px] font-medium text-[#737373]">Ajouter un cours</div>
+    </div>
+);
 
 // ─── Page principale ───────────────────────────────────────
 
 export default function CoursesPage() {
     const navigate = useNavigate();
     const { data: courses = [], isLoading } = useCourses();
-    const { mutate: createCourse, isPending: isCreating } = useCreateCourse();
-    const { mutate: deleteCourse } = useDeleteCourse();
+    const { data: tasks = [] } = useTasks();
+    const { data: events = [] } = useEvents();
 
     const [showModal, setShowModal] = useState(false);
-    const [search, setSearch] = useState('');
+    const [riskFilter, setRiskFilter] = useState('Tous les risques');
 
-    const filtered = courses.filter(
-        (c) =>
-            !c.isDeleted &&
-            (c.name.toLowerCase().includes(search.toLowerCase()) ||
-                c.code.toLowerCase().includes(search.toLowerCase()))
-    );
-
-    const handleCreate = (payload: Partial<Course>) => {
-        createCourse(payload, {
-            onSuccess: () => setShowModal(false),
-        });
-    };
+    const activeCourses = courses.filter((c) => !c.isDeleted);
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-4 pb-10">
 
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-xl font-medium text-base-content">Mes cours</h1>
-                    <p className="text-sm text-base-content/40 mt-1">
-                        {courses.filter((c) => !c.isDeleted).length} cours
-                    </p>
+            {/* Header select (Filter imitation) */}
+            <div className="mb-6 flex justify-between items-center">
+                <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-tight">Cours</h1>
+                <div className="border border-[#E5E5E5] bg-[#FAF9F6] rounded-xl flex items-center pr-3 max-w-[200px]">
+                    <select
+                        value={riskFilter}
+                        onChange={(e) => setRiskFilter(e.target.value)}
+                        className="flex-1 bg-transparent p-3 text-[14px] font-medium text-[#1A1A1A] outline-none cursor-pointer appearance-none"
+                    >
+                        <option>Tous les risques</option>
+                        <option>LOW</option>
+                        <option>MEDIUM</option>
+                        <option>HIGH</option>
+                        <option>CRITICAL</option>
+                    </select>
+                    {/* Flèche SVG pour le select personnalisé */}
+                    <svg className="w-4 h-4 text-[#737373] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                 </div>
             </div>
 
-            {/* Recherche */}
-            <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un cours..."
-                className="input input-bordered input-sm w-full mb-6"
-            />
-
-            {/* Grille */}
+            {/* Grid */}
             {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-36 skeleton rounded-xl" />
+                        <div key={i} className="h-44 bg-gray-100 rounded-[20px] animate-pulse" />
                     ))}
                 </div>
-            ) : filtered.length === 0 ? (
-                <div className="text-center py-16 text-base-content/40">
-                    <div className="text-4xl mb-3">📚</div>
-                    <div className="text-sm">
-                        {search ? 'Aucun cours trouvé' : 'Aucun cours pour le moment'}
-                    </div>
-                    {!search && (
-                        <div className="text-xs text-blue-500 font-medium mt-4">
-                            Appuyez sur le bouton + pour commencer
-                        </div>
-                    )}
-                </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filtered.map((course) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
+                    {activeCourses.map((course) => (
                         <CourseCard
                             key={course.id}
                             course={course}
+                            tasks={tasks}
+                            events={events}
                             onClick={(id) => navigate(`/courses/${id}`)}
-                            onDelete={(id) => {
-                                if (confirm('Supprimer ce cours ?')) deleteCourse(id);
-                            }}
                         />
                     ))}
+                    {/* Toujours le bouton ajouter à la fin */}
+                    <AddCourseCard onClick={() => setShowModal(true)} />
                 </div>
             )}
 
-            {/* Floating Action Button (FAB) */}
-            <button
-                onClick={() => setShowModal(true)}
-                className="fixed bottom-6 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-xl flex items-center justify-center text-3xl font-light transition-transform hover:scale-105 z-50 focus:outline-none"
-            >
-                +
-            </button>
-
-            {/* Modal */}
+            {/* Modal de création */}
             {showModal && (
-                <CreateCourseModal
-                    onClose={() => setShowModal(false)}
-                    onCreate={handleCreate}
-                    isLoading={isCreating}
-                />
+                <CourseFormModal onClose={() => setShowModal(false)} />
             )}
 
         </div>
