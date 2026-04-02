@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
     BookOpen,
@@ -40,7 +40,6 @@ const routeTitles: Record<string, string> = {
 export default function AppLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { logout } = useAuth();
-    const navigate = useNavigate();
     const location = useLocation();
     const { isOnline, isSyncing } = useNetworkSync();
 
