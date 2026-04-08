@@ -1,14 +1,14 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRouter';
 import { lazy, Suspense } from 'react';
+import AppLayout from '../layouts/AppLayout';
+import DashboardPage from '../pages/Dashboard/DashboardPage';
 
 
-const AppLayout = lazy(() => import('../layouts/AppLayout'));
 const LoginPage = lazy(() => import('../pages/Auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/Auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/Auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../pages/Auth/ResetPassword'));
-const DashboardPage = lazy(() => import('../pages/Dashboard/DashboardPage'));
 const CoursesPage = lazy(() => import('../pages/Courses/CoursesPage'));
 const CourseDetailPage = lazy(() => import('../pages/Courses/CoursesDetailPage'));
 const AgendaPage = lazy(() => import('../pages/Agenda/AgendaPage'));
@@ -57,11 +57,11 @@ export const router = createBrowserRouter([
                 // AppLayout enveloppe toutes les pages protégées
                 // Il affiche la sidebar + topbar
                 // Les pages s'affichent via Outlet à l'intérieur
-                element: <Suspense fallback={<PageLoader />}><AppLayout /></Suspense>,
+                element: <AppLayout />,
                 children: [
                     {
                         path: '/dashboard',
-                        element: <Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>,
+                        element: <DashboardPage />,
                     },
                     {
                         path: '/courses',

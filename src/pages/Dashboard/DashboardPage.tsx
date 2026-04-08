@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
@@ -44,6 +45,20 @@ const eventTypeBadge: Record<string, string> = {
     PERSONAL: 'bg-[#F3F4F6] text-[#1A1A1A]',
     AUTRE: 'bg-[#F3F4F6] text-[#1A1A1A]',
 };
+
+const priorityOrder: Record<string, number> = {
+    CRITICAL: 0,
+    HIGH: 1,
+    MEDIUM: 2,
+    LOW: 3,
+};
+
+const dateFormatter = new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+});
 
 const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString('fr-FR', {
@@ -179,40 +194,49 @@ export default function DashboardPage() {
     const { data: grades = [] } = useGrades();
     const { mutate: updateTask } = useUpdateTask();
 
-    // Mapping courses
-    const courseDict = courses.reduce((acc, c) => {
-        acc[c.id] = c.name;
-        return acc;
-    }, {} as Record<string, string>);
+    const courseDict = useMemo(
+        () =>
+            courses.reduce((acc, c) => {
+                acc[c.id] = c.name;
+                return acc;
+            }, {} as Record<string, string>),
+        [courses]
+    );
 
-    // Filtres
-    const todayEvents = events
-        .filter(isTodayEvent)
-        .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    const todayEvents = useMemo(
+        () =>
+            events
+                .filter(isTodayEvent)
+                .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
+        [events]
+    );
 
-    const activeTasks = tasks
-        .filter((t) => !t.isDeleted && t.status !== 'COMPLETED' && t.status !== 'CANCELED')
-        .sort((a, b) => {
-            const priorityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-            return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
-        });
+    const activeTasks = useMemo(
+        () =>
+            tasks
+                .filter((t) => !t.isDeleted && t.status !== 'COMPLETED' && t.status !== 'CANCELED')
+                .sort((a, b) => (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3)),
+        [tasks]
+    );
 
     // Calculs de moyennes et de risques — entièrement dynamiques
     const { overallAverage, riskCoursesCount } = useDashboardStats(grades, courses);
 
-    const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    const dateFormatted = new Date().toLocaleDateString('fr-FR', dateOptions);
+    const dateFormatted = useMemo(() => dateFormatter.format(new Date()), []);
 
-    const handleComplete = (id: string) => {
-        const task = tasks.find((t) => t.id === id);
-        if (!task) return;
-        updateTask({
-            id,
-            payload: {
-                status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED',
-            },
-        });
-    };
+    const handleComplete = useCallback(
+        (id: string) => {
+            const task = tasks.find((t) => t.id === id);
+            if (!task) return;
+            updateTask({
+                id,
+                payload: {
+                    status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED',
+                },
+            });
+        },
+        [tasks, updateTask]
+    );
 
     return (
         <div className="max-w-[800px] mx-auto flex flex-col px-4 md:px-0 pb-20 pt-2 md:pt-6">
@@ -260,6 +284,7 @@ export default function DashboardPage() {
                     Aujourd'hui
                 </div>
                 
+                <div className="min-h-[136px]">
                 {eventsLoading ? (
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                         {[1, 2, 3].map((i) => (
@@ -267,7 +292,7 @@ export default function DashboardPage() {
                         ))}
                     </div>
                 ) : todayEvents.length === 0 ? (
-                    <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 text-center shadow-sm">
+                    <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 text-center shadow-sm min-h-[120px] flex flex-col justify-center">
                         <div className="flex justify-center mb-2 opacity-30">
                             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 14h.01"/><path d="M7 7h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
                         </div>
@@ -285,6 +310,7 @@ export default function DashboardPage() {
                         ))}
                     </div>
                 )}
+                </div>
             </div>
 
             {/* ── TACHES ── */}
@@ -322,10 +348,7 @@ export default function DashboardPage() {
                                     key={task.id} 
                                     task={task} 
                                     courseName={task.courseId ? courseDict[task.courseId] : undefined}
-                                    onComplete={(id) => {
-                                        // Update local state optimistic if we want but api handles it
-                                        handleComplete(id);
-                                    }} 
+                                    onComplete={handleComplete}
                                     isLast={isLast}
                                 />
                             );
@@ -338,3 +361,4 @@ export default function DashboardPage() {
         </div>
     );
 }
+
