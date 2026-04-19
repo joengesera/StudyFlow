@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { useCourse } from '../../hooks/useCourses';
+import { useCourse, useCourseWorkTypes } from '../../hooks/useCourses';
 import { useGrades, useCreateGrade } from '../../hooks/useGrades';
 import { useEvents } from '../../hooks/useEvents';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
@@ -56,10 +56,31 @@ const simulateGrade = (grades: Grade[], target: number, nextWeight: number = 1):
 
 const NotesTab = ({ courseId }: { courseId: string }) => {
     const { data: grades = [], isLoading } = useGrades(courseId);
+    const { data: courseWorkTypes = [] } = useCourseWorkTypes(courseId);
     const { mutate: createGrade, isPending: isCreating } = useCreateGrade();
     const [showForm, setShowForm] = useState(false);
     const [simulatorTarget, setSimulatorTarget] = useState<number | ''>(10);
     const [form, setForm] = useState({ name: '', score: '', maxScore: '20', weight: '1', workTypeLabel: 'Examen' });
+
+    const workTypeOptions = useMemo(() => {
+        if (courseWorkTypes.length > 0) {
+            return courseWorkTypes.map((item) => ({
+                value: item.type,
+                label: `${item.type} (${item.weightPercent}%)`,
+                weightPercent: item.weightPercent
+            }));
+        }
+        return [
+            { value: 'EXAMEN', label: 'EXAMEN', weightPercent: null as number | null },
+            { value: 'INTERRO', label: 'INTERRO', weightPercent: null as number | null },
+            { value: 'TP', label: 'TP', weightPercent: null as number | null }
+        ];
+    }, [courseWorkTypes]);
+
+    const normalizedFormType = String(form.workTypeLabel || '').trim().toUpperCase();
+    const currentTypeValue = workTypeOptions.some((option) => option.value === normalizedFormType)
+        ? normalizedFormType
+        : (workTypeOptions[0]?.value ?? 'EXAMEN');
 
     const average = grades.length === 0 ? null :
         grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0) /
@@ -69,9 +90,29 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
+        const selectedType = workTypeOptions.find((option) => option.value === currentTypeValue);
         createGrade(
-            { ...form, score: Number(form.score), maxScore: Number(form.maxScore), weight: Number(form.weight), courseId },
-            { onSuccess: () => { setShowForm(false); setForm({ name: '', score: '', maxScore: '20', weight: '1', workTypeLabel: 'Examen' }); } }
+            {
+                ...form,
+                score: Number(form.score),
+                maxScore: Number(form.maxScore),
+                weight: Number(form.weight),
+                workTypeLabel: currentTypeValue,
+                percentage: selectedType?.weightPercent ?? undefined,
+                courseId
+            },
+            {
+                onSuccess: () => {
+                    setShowForm(false);
+                    setForm({
+                        name: '',
+                        score: '',
+                        maxScore: '20',
+                        weight: '1',
+                        workTypeLabel: workTypeOptions[0]?.value ?? 'EXAMEN'
+                    });
+                }
+            }
         );
     };
 
@@ -116,6 +157,30 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
                         <div>
                             <label className="text-xs text-[#737373] mb-1.5 block font-medium">Coeff.</label>
                             <input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} min={0.5} step="0.5" className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Type de note</label>
+                            <select
+                                value={currentTypeValue}
+                                onChange={(e) => setForm({ ...form, workTypeLabel: e.target.value })}
+                                className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none"
+                            >
+                                {workTypeOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Pondération appliquée</label>
+                            <input
+                                readOnly
+                                value={`${workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent ?? '-'}%`}
+                                className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-[#F3F4F6] text-[14px] font-medium outline-none"
+                            />
                         </div>
                     </div>
                     <div className="flex justify-end gap-3 mt-2">

@@ -33,6 +33,14 @@ export const useCourse = (id: string) => {
     });
 };
 
+export const useCourseWorkTypes = (courseId?: string) => {
+    return useQuery({
+        queryKey: ['courses', courseId, 'work-types'],
+        queryFn: () => coursesAPI.getWorkTypes(courseId as string),
+        enabled: !!courseId,
+    });
+};
+
 export const useCreateCourse = () => {
     const queryClient = useQueryClient();
 

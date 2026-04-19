@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
 import { useAuthStore } from '../../stores/authStore';
+import { useVisualComfort, type VisualComfortMode } from '../../hooks/useVisualComfort';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { apiClient } from '../../api/client';
 
 // ─── Hook install PWA ──────────────────────────────────────
@@ -170,6 +172,68 @@ const PersonalInfoSection = () => {
 
 // ─── Section : Sécurité ────────────────────────────────────
 
+const visualComfortOptions: Array<{ value: VisualComfortMode; title: string; description: string; scale: string }> = [
+    {
+        value: 'standard',
+        title: 'Standard',
+        description: 'Taille actuelle',
+        scale: '100%',
+    },
+    {
+        value: 'comfortable',
+        title: 'Confort',
+        description: 'Texte plus lisible',
+        scale: '108%',
+    },
+    {
+        value: 'high',
+        title: 'Confort+',
+        description: 'Maximum lisibilite',
+        scale: '116%',
+    },
+];
+
+const VisualComfortSection = () => {
+    const { mode, setMode } = useVisualComfort();
+
+    return (
+        <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
+            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2">
+                Accessibilite visuelle
+            </div>
+            <p className="text-[13px] font-medium text-[#737373] mb-4">
+                Ajuste la taille globale des petits textes pour un meilleur confort de lecture.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {visualComfortOptions.map((option) => {
+                    const selected = mode === option.value;
+                    return (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setMode(option.value)}
+                            aria-pressed={selected}
+                            className={`
+                                text-left rounded-xl border p-4 transition-colors
+                                ${selected
+                                    ? 'border-[#1A1A1A] bg-white shadow-sm'
+                                    : 'border-[#E5E5E5] bg-white/60 hover:bg-white'}
+                            `}
+                        >
+                            <div className="text-[14px] font-bold text-[#1A1A1A]">{option.title}</div>
+                            <div className="text-[13px] font-medium text-[#737373] mt-1">{option.description}</div>
+                            <div className={`mt-2 inline-flex px-2 py-1 rounded-[6px] text-[12px] font-bold ${selected ? 'bg-[#1A1A1A] text-white' : 'bg-[#F3F4F6] text-[#525252]'}`}>
+                                {option.scale}
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const SecuritySection = () => {
     const [form, setForm] = useState({
         currentPassword: '',
@@ -282,57 +346,31 @@ const SecuritySection = () => {
 // ─── Section : Notifications ───────────────────────────────
 
 const NotificationsSection = () => {
-    const [settings, setSettings] = useState({
-        examReminder: false,
-        lateTasks: false,
-        highRisk: false,
-        weeklySummary: false,
-    });
-    
-    const [permissionStatus, setPermissionStatus] = useState(
-        'Notification' in window ? Notification.permission : 'denied'
-    );
+    const {
+        isSupported,
+        permissionStatus,
+        isSubscribed,
+        isLoading,
+        error,
+        preferences,
+        setPreference,
+        enablePush,
+        disablePush,
+        sendTestNotification,
+    } = usePushNotifications();
 
-    const toggle = async (key: keyof typeof settings) => {
-        if (!settings[key] && permissionStatus !== 'granted') {
-            if ('Notification' in window) {
-                const result = await Notification.requestPermission();
-                setPermissionStatus(result);
-                if (result !== 'granted') return;
-            } else {
-                alert("Ce navigateur ne supporte pas les notifications desktop.");
-                return;
-            }
+    const statusBadge = (() => {
+        if (!isSupported) {
+            return { label: 'Non supporte', className: 'bg-[#F3F4F6] text-[#6B7280]' };
         }
-        setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-        
-        // Exemple de scheduling direct d'une notification de test (10 sec plus tard)
-        if (!settings[key] && permissionStatus === 'granted') {
-            // (import dynamically or use window for tests)
-            try {
-                const reg = await navigator.serviceWorker.ready;
-                // Si showTrigger est dispo
-                if ('showTrigger' in Notification.prototype) {
-                    await reg.showNotification('Notifications Activées !', {
-                        body: `L'alerte "${key}" est active.`,
-                        icon: '/pwa-192x192.png',
-                        // @ts-ignore
-                        showTrigger: new (window.TimestampTrigger as any)(Date.now() + 5000)
-                    });
-                } else {
-                    // Fallback local timeout si app ouverte
-                    setTimeout(() => {
-                        reg.showNotification('Notifications Activées !', {
-                            body: `L'alerte "${key}" est active.`,
-                            icon: '/pwa-192x192.png',
-                        });
-                    }, 5000);
-                }
-            } catch (e) {
-                console.warn('Erreur test notification locale:', e);
-            }
+        if (permissionStatus === 'denied') {
+            return { label: 'Bloque', className: 'bg-[#FEF2F2] text-[#DC2626]' };
         }
-    };
+        if (permissionStatus === 'granted' && isSubscribed) {
+            return { label: 'Actif', className: 'bg-[#ECFDF5] text-[#047857]' };
+        }
+        return { label: 'Inactif', className: 'bg-[#FEF9C3] text-[#92400E]' };
+    })();
 
     const items = [
         {
@@ -342,25 +380,82 @@ const NotificationsSection = () => {
         },
         {
             key: 'lateTasks' as const,
-            label: 'Tâches en retard',
+            label: 'Taches en retard',
             sub: 'Notification quotidienne',
         },
         {
             key: 'highRisk' as const,
-            label: 'Cours à risque élevé',
-            sub: 'Quand le score dépasse HIGH',
+            label: 'Cours a risque eleve',
+            sub: 'Quand le score depasse HIGH',
         },
         {
             key: 'weeklySummary' as const,
-            label: 'Résumé hebdomadaire',
+            label: 'Resume hebdomadaire',
             sub: 'Chaque lundi matin',
         },
     ];
 
     return (
         <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
-            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2">
-                Notifications
+            <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest">
+                    Notifications push
+                </div>
+                <span className={`px-2.5 py-1 rounded-[6px] text-[12px] font-bold ${statusBadge.className}`}>
+                    {statusBadge.label}
+                </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+                {isSubscribed ? (
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => void sendTestNotification()}
+                            disabled={isLoading}
+                            className="h-9 px-4 rounded-xl border border-[#E5E5E5] text-[13px] font-bold text-[#1A1A1A] bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        >
+                            Tester
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void disablePush()}
+                            disabled={isLoading}
+                            className="h-9 px-4 rounded-xl border border-[#FECACA] text-[13px] font-bold text-[#DC2626] bg-[#FEF2F2] hover:bg-[#FEE2E2] transition-colors disabled:opacity-50"
+                        >
+                            Desactiver push
+                        </button>
+                    </>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => void enablePush()}
+                        disabled={isLoading || !isSupported}
+                        className="h-9 px-4 rounded-xl border border-[#1A1A1A] text-[13px] font-bold text-white bg-[#1A1A1A] hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                        Activer push
+                    </button>
+                )}
+            </div>
+
+            {!isSupported && (
+                <div className="text-[13px] font-medium text-[#737373] mb-3">
+                    Ce navigateur ne supporte pas les notifications push.
+                </div>
+            )}
+            {permissionStatus === 'denied' && (
+                <div className="text-[13px] font-medium text-[#B45309] mb-3">
+                    Permission bloquee. Autorise les notifications dans les parametres du navigateur.
+                </div>
+            )}
+            {error && (
+                <div className="text-[13px] font-bold text-[#DC2626] mb-3">
+                    {error}
+                </div>
+            )}
+
+            <div className="text-[12px] font-medium text-[#737373] mb-2">
+                Preferences de notification
             </div>
 
             <div className="flex flex-col">
@@ -377,8 +472,8 @@ const NotificationsSection = () => {
                             <input
                                 type="checkbox"
                                 className="sr-only peer"
-                                checked={settings[item.key]}
-                                onChange={() => toggle(item.key)}
+                                checked={preferences[item.key]}
+                                onChange={() => setPreference(item.key, !preferences[item.key])}
                             />
                             <div className="w-[44px] h-[24px] bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
                         </label>
@@ -388,8 +483,6 @@ const NotificationsSection = () => {
         </div>
     );
 };
-
-// ─── Section : Statistiques ────────────────────────────────
 
 const StatsSection = () => {
     const { user } = useAuthStore();
@@ -536,6 +629,7 @@ export default function ProfilePage() {
             </div>
 
             <PersonalInfoSection />
+            <VisualComfortSection />
             <SecuritySection />
             <NotificationsSection />
             <StatsSection />
@@ -544,3 +638,4 @@ export default function ProfilePage() {
         </div>
     );
 }
+

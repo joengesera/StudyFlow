@@ -37,8 +37,7 @@ export default function RegisterPage() {
         register({
             name: `${form.firstName} ${form.lastName}`.trim(),
             email: form.email,
-            password: form.password,
-            role: 'STUDENT'
+            password: form.password
         });
     };
 

@@ -67,6 +67,7 @@ export const useUpdateTask = () => {
 
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            queryClient.invalidateQueries({ queryKey: taskKeys.board });
         },
     });
 };
@@ -78,6 +79,7 @@ export const useCreateTask = () => {
         mutationFn: tasksApi.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            queryClient.invalidateQueries({ queryKey: taskKeys.board });
         },
     });
 };
@@ -89,6 +91,7 @@ export const useDeleteTask = () => {
         mutationFn: tasksApi.delete,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: taskKeys.all });
+            queryClient.invalidateQueries({ queryKey: taskKeys.board });
         },
     });
 };

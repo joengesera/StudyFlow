@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore.ts';
-import { useSyncStore } from '../stores/syncStore.ts';
 
 export const useAuth = () => {
     const navigate = useNavigate();
@@ -22,15 +21,10 @@ export const useAuth = () => {
             // 1. Vider le store d'authentification
             logout();
 
-            // 2. Vider le store de synchronisation (cache local offline)
-            const syncStore = useSyncStore.getState();
-            syncStore.clearCache();
-            syncStore.clearQueue();
-
-            // 3. Vider le cache de React Query
+            // 2. Vider le cache de React Query
             queryClient.clear();
 
-            // 4. Redirection vers login
+            // 3. Redirection vers login
             navigate('/login');
         }
     });

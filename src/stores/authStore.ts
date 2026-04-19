@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useSyncStore } from './syncStore';
-
-// ─── Types ────────────────────────────────────────────────
+import { setSyncAccountScope } from './syncStore';
 
 export interface User {
     id: string;
@@ -17,7 +15,7 @@ export interface User {
 
 export interface Tokens {
     refreshToken: string;
-    accessToken:string
+    accessToken: string;
 }
 
 interface AuthState {
@@ -30,8 +28,6 @@ interface AuthState {
     setTokens: (tokens: Tokens) => void;
 }
 
-// ─── Store ────────────────────────────────────────────────
-
 export const useAuthStore = create<AuthState>()(
     persist(
         (set) => ({
@@ -39,17 +35,17 @@ export const useAuthStore = create<AuthState>()(
             tokens: null,
             isAuthenticated: false,
 
-            login: (user, tokens) => set({
-                user,
-                tokens,
-                isAuthenticated: true,
-            }),
+            login: (user, tokens) => {
+                void setSyncAccountScope(user.id);
+                set({
+                    user,
+                    tokens,
+                    isAuthenticated: true,
+                });
+            },
 
             logout: () => {
-                // On s'assure que le cache local offline est vidé
-                useSyncStore.getState().clearCache();
-                useSyncStore.getState().clearQueue();
-                
+                void setSyncAccountScope(null);
                 set({
                     user: null,
                     tokens: null,
@@ -57,14 +53,15 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            updateUser: (partial) => set((state) => ({
-                user: state.user ? { ...state.user, ...partial } : null,
-            })),
+            updateUser: (partial) =>
+                set((state) => ({
+                    user: state.user ? { ...state.user, ...partial } : null,
+                })),
 
             setTokens: (tokens) => set({ tokens }),
         }),
         {
             name: 'auth-storage',
-        }
-    )
+        },
+    ),
 );

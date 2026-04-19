@@ -16,13 +16,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNetworkSync } from '../hooks/useNetworkSync';
+import { useSyncStore } from '../stores/syncStore';
 import logo from '@/assets/Fichier1.svg'
 
 const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/courses', icon: BookOpen, label: 'Cours' },
     { to: '/agenda', icon: CalendarDays, label: 'Planning' },
-    { to: '/tasks', icon: CheckSquare, label: 'Tâches' },
+    { to: '/tasks', icon: CheckSquare, label: 'Taches' },
     { to: '/works', icon: ClipboardList, label: 'Works' },
     { to: '/risk', icon: AlertTriangle, label: 'Risque' },
 ];
@@ -31,7 +32,7 @@ const routeTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
     '/courses': 'Mes cours',
     '/agenda': 'Planning',
-    '/tasks': 'Tâches',
+    '/tasks': 'Taches',
     '/works': 'Travaux',
     '/risk': 'Analyse de risque',
     '/profile': 'Mon profil',
@@ -42,6 +43,7 @@ export default function AppLayout() {
     const { logout } = useAuth();
     const location = useLocation();
     const { isOnline, isSyncing } = useNetworkSync();
+    const isSyncReady = useSyncStore((state) => state.isReady);
 
     // Fermeture de la sidebar sur mobile après navigation
     useEffect(() => {
@@ -60,6 +62,16 @@ export default function AppLayout() {
 
     const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
     const dateFormatted = new Date().toLocaleDateString('fr-FR', dateOptions);
+
+    if (!isSyncReady) {
+        return (
+            <div className="h-screen w-full bg-[#FAF9F6] flex items-center justify-center">
+                <div className="text-[14px] font-bold text-[#737373] uppercase tracking-wide">
+                    Initialisation hors ligne...
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-screen bg-[#FAF9F6] overflow-hidden font-sans text-base">
@@ -166,13 +178,13 @@ export default function AppLayout() {
                     <button
                         onClick={handleLogout}
                         className="relative flex items-center md:justify-center w-full h-[60px] cursor-pointer group px-6 md:px-0"
-                        title="Se déconnecter"
+                        title="Se deconnecter"
                     >
                         <div className="w-[44px] h-[44px] rounded-[14px] md:rounded-full flex items-center justify-center bg-[#FEF2F2] md:bg-[#1A1A1A] text-[#EF4444] md:text-white shrink-0 group-hover:bg-[#FECACA] md:group-hover:opacity-80 transition-all md:shadow-sm md:group-hover:scale-105">
                             <LogOut size={18} strokeWidth={2.5} className="ml-0.5" />
                         </div>
                         <span className="md:hidden ml-4 text-[15px] font-bold text-[#EF4444]">
-                            Déconnexion
+                            Deconnexion
                         </span>
                     </button>
                 </div>
@@ -199,7 +211,7 @@ export default function AppLayout() {
                     
                     {/* Header Interne */}
                     <header className="px-6 md:px-8 py-5 border-b border-[#E5E5E5] flex justify-between items-center bg-white z-10 shrink-0">
-                        {/* Titre (masqué sur mobile car déjà dans le mobile header hors cadre) */}
+                        {/* Titre (masque sur mobile car deja dans le mobile header hors cadre) */}
                         <h1 className="text-[20px] font-bold text-[#1A1A1A] tracking-tight hidden md:block">
                             {routeTitle}
                         </h1>
@@ -208,19 +220,19 @@ export default function AppLayout() {
 
                         {/* Actions à droite */}
                         <div className="flex items-center gap-5">
-                            <div className="text-[13px] font-bold text-[#737373] capitalize truncate max-w-[150px] sm:max-w-none">
+                            <div className="text-[14px] font-bold text-[#737373] capitalize truncate max-w-[150px] sm:max-w-none">
                                 {dateFormatted}
                             </div>
 
                             {/* Indicateurs de synchronisation */}
                             {!isOnline && (
-                                <span className="bg-[#FEF2F2] text-[#EF4444] px-2.5 py-1 rounded-[6px] text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5">
+                                <span className="bg-[#FEF2F2] text-[#EF4444] px-2.5 py-1 rounded-[6px] text-[12px] font-bold tracking-widest uppercase flex items-center gap-1.5">
                                     <WifiOff size={12} />
                                     Hors ligne
                                 </span>
                             )}
                             {isOnline && isSyncing && (
-                                <span className="bg-[#FEF3C7] text-[#F59E0B] px-2.5 py-1 rounded-[6px] text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5">
+                                <span className="bg-[#FEF3C7] text-[#F59E0B] px-2.5 py-1 rounded-[6px] text-[12px] font-bold tracking-widest uppercase flex items-center gap-1.5">
                                     <RefreshCw size={12} className="animate-spin" />
                                     Sync...
                                 </span>

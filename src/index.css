@@ -4,3 +4,83 @@
 @theme {
   --font-sans: "Segoe UI", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
 }
+
+@layer base {
+  :root {
+    --comfort-scale: 1;
+  }
+
+  html[data-visual-comfort='comfortable'] {
+    --comfort-scale: 1.08;
+  }
+
+  html[data-visual-comfort='high'] {
+    --comfort-scale: 1.16;
+  }
+
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: #faf9f6;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *:focus-visible {
+    outline: 2px solid #1a1a1a;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .auth-bg-shell {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .auth-bg-media {
+    position: absolute;
+    inset: -3rem;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    filter: blur(18px) saturate(1.08);
+    opacity: 0.45;
+    transform: scale(1.06);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .auth-bg-tint {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.62), transparent 58%),
+      linear-gradient(to bottom, rgb(250 249 246 / 0.85), rgb(250 249 246 / 0.9));
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Raise tiny text globally for low-vision readability. */
+  [class*='text-[10px]'],
+  [class*='text-[11px]'],
+  [class*='text-[12px]'],
+  .text-\[10px\],
+  .text-\[11px\],
+  .text-\[12px\],
+  .text-xs {
+    font-size: calc(0.875rem * var(--comfort-scale)) !important;
+    line-height: 1.35 !important;
+  }
+
+  [class*='text-[13px]'],
+  .text-\[13px\] {
+    font-size: calc(0.9375rem * var(--comfort-scale)) !important;
+    line-height: 1.4 !important;
+  }
+}

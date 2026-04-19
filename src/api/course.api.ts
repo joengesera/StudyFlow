@@ -1,6 +1,13 @@
 import { apiClient, unwrapApiData } from './client';
 import type { Course } from '../types';
 
+export interface CourseWorkType {
+    id: string;
+    courseId: string;
+    type: string;
+    weightPercent: number;
+}
+
 export const coursesAPI = {
 
     getAll: async (): Promise<Course[]> => {
@@ -25,6 +32,11 @@ export const coursesAPI = {
 
     delete: async (id: string): Promise<void> => {
         await apiClient.delete(`/courses/${id}`);
+    },
+
+    getWorkTypes: async (id: string): Promise<CourseWorkType[]> => {
+        const { data } = await apiClient.get(`/courses/${id}/work-types`);
+        return unwrapApiData(data);
     },
 
 };
