@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
 import { useCourse, useCourseWorkTypes } from '../../hooks/useCourses';
 import { useGrades, useCreateGrade } from '../../hooks/useGrades';
 import { useEvents } from '../../hooks/useEvents';
@@ -9,569 +8,610 @@ import { useRisk } from '../../hooks/useRisks';
 import CourseFormModal from '../../components/Courses/CourseFormModal';
 import type { Grade } from '../../types';
 
-// Tab Definitions
 type Tab = 'notes' | 'travaux' | 'taches' | 'evenements' | 'risque';
 
-// Risk Styles
 const riskStyles = {
-    LOW: { text: "text-[#3B8A44]", bg: "bg-[#E8F2E8]" },
-    MEDIUM: { text: "text-[#A36D16]", bg: "bg-[#F5EDDF]" },
-    HIGH: { text: "text-[#B22A2A]", bg: "bg-[#F5E2E2]" },
-    CRITICAL: { text: "text-[#B22A2A]", bg: "bg-[#F5E2E2]" }
+  LOW: { bg: 'bg-primary/10', text: 'text-primary', dot: 'bg-primary' },
+  MEDIUM: { bg: 'bg-tertiary/10', text: 'text-tertiary', dot: 'bg-tertiary' },
+  HIGH: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error' },
+  CRITICAL: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error' },
 };
 
-// ─── Helpers ──────────────────────────────────────────────
 const typeToLabel = (grade: Grade): string => {
-    if (grade.workTypeLabel) return grade.workTypeLabel;
-    const nameStr = grade.name.toLowerCase();
-    if (nameStr.includes('interro')) return 'Interro';
-    if (nameStr.includes('tp')) return 'TP';
-    if (nameStr.includes('projet')) return 'Projet';
-    return 'Examen';
+  if (grade.workTypeLabel) return grade.workTypeLabel;
+  const nameStr = grade.name.toLowerCase();
+  if (nameStr.includes('interro')) return 'Interro';
+  if (nameStr.includes('tp')) return 'TP';
+  if (nameStr.includes('projet')) return 'Projet';
+  return 'Examen';
 };
 
 const getBadgeStyle = (label: string) => {
-    if (label === 'Examen') return 'bg-[#FDF2F2] text-[#E74C3C]';
-    if (label === 'Interro') return 'bg-[#EFF6FF] text-[#3B82F6]';
-    if (label === 'TP' || label === 'Projet') return 'bg-[#F0FDF4] text-[#22C55E]';
-    return 'bg-gray-100 text-gray-600';
+  if (label === 'Examen') return 'bg-error/10 text-error';
+  if (label === 'Interro') return 'bg-primary/10 text-primary';
+  if (label === 'TP' || label === 'Projet') return 'bg-tertiary/10 text-tertiary';
+  return 'bg-surface-container-highest text-on-surface-variant';
 };
 
 const getScoreColor = (score: number, max: number) => {
-    const ratio = score / max;
-    if (ratio >= 0.7) return 'text-[#22C55E]';
-    if (ratio >= 0.45) return 'text-[#F59E0B]'; // orange
-    return 'text-[#E74C3C]';
+  const ratio = score / max;
+  if (ratio >= 0.7) return 'text-primary';
+  if (ratio >= 0.45) return 'text-tertiary';
+  return 'text-error';
 };
 
 const simulateGrade = (grades: Grade[], target: number, nextWeight: number = 1): number | null => {
-    if (grades.length === 0) return target;
-    const totalWeight = grades.reduce((sum, g) => sum + (g.weight ?? 1), 0) + nextWeight;
-    const currentSum = grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0);
-    const needed = (target * totalWeight - currentSum) / nextWeight;
-    return Math.round(needed * 100) / 100;
+  if (grades.length === 0) return target;
+  const totalWeight = grades.reduce((sum, g) => sum + (g.weight ?? 1), 0) + nextWeight;
+  const currentSum = grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 100) * (g.weight ?? 1), 0);
+  const needed = (target * totalWeight - currentSum) / nextWeight;
+  return Math.round(needed * 100) / 100;
 };
 
-// ─── Onglet Notes ──────────────────────────────────────────
-
 const NotesTab = ({ courseId }: { courseId: string }) => {
-    const { data: grades = [], isLoading } = useGrades(courseId);
-    const { data: courseWorkTypes = [] } = useCourseWorkTypes(courseId);
-    const { mutate: createGrade, isPending: isCreating } = useCreateGrade();
-    const [showForm, setShowForm] = useState(false);
-    const [simulatorTarget, setSimulatorTarget] = useState<number | ''>(10);
-    const [form, setForm] = useState({ name: '', score: '', maxScore: '20', weight: '1', workTypeLabel: 'Examen' });
+  const { data: grades = [], isLoading } = useGrades(courseId);
+  const { data: courseWorkTypes = [] } = useCourseWorkTypes(courseId);
+  const { mutate: createGrade, isPending: isCreating } = useCreateGrade();
+  const [showForm, setShowForm] = useState(false);
+  const [simulatorTarget, setSimulatorTarget] = useState<number | ''>(10);
+  const [form, setForm] = useState({ name: '', score: '', maxScore: '20', weight: '1', workTypeLabel: 'EXAMEN' });
 
-    const workTypeOptions = useMemo(() => {
-        if (courseWorkTypes.length > 0) {
-            return courseWorkTypes.map((item) => ({
-                value: item.type,
-                label: `${item.type} (${item.weightPercent}%)`,
-                weightPercent: item.weightPercent
-            }));
+  const workTypeOptions = useMemo(() => {
+    if (courseWorkTypes.length > 0) {
+      return courseWorkTypes.map((item) => ({
+        value: item.type,
+        label: `${item.type} (${item.weightPercent}%)`,
+        weightPercent: item.weightPercent
+      }));
+    }
+    return [
+      { value: 'EXAMEN', label: 'EXAMEN', weightPercent: null as number | null },
+      { value: 'INTERRO', label: 'INTERRO', weightPercent: null as number | null },
+      { value: 'TP', label: 'TP', weightPercent: null as number | null }
+    ];
+  }, [courseWorkTypes]);
+
+  const normalizedFormType = String(form.workTypeLabel || '').trim().toUpperCase();
+  const currentTypeValue = workTypeOptions.some((option) => option.value === normalizedFormType)
+    ? normalizedFormType
+    : (workTypeOptions[0]?.value ?? 'EXAMEN');
+
+  const average = grades.length === 0 ? null :
+    grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 100) * (g.weight ?? 1), 0) /
+    grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
+
+  const needed = simulateGrade(grades, Number(simulatorTarget));
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const selectedType = workTypeOptions.find((option) => option.value === currentTypeValue);
+    createGrade(
+      {
+        ...form,
+        score: Number(form.score),
+        maxScore: Number(form.maxScore),
+        weight: Number(form.weight),
+        workTypeLabel: currentTypeValue,
+        percentage: selectedType?.weightPercent ?? undefined,
+        courseId
+      },
+      {
+        onSuccess: () => {
+          setShowForm(false);
+          setForm({
+            name: '',
+            score: '',
+            maxScore: '20',
+            weight: '1',
+            workTypeLabel: workTypeOptions[0]?.value ?? 'EXAMEN'
+          });
         }
-        return [
-            { value: 'EXAMEN', label: 'EXAMEN', weightPercent: null as number | null },
-            { value: 'INTERRO', label: 'INTERRO', weightPercent: null as number | null },
-            { value: 'TP', label: 'TP', weightPercent: null as number | null }
-        ];
-    }, [courseWorkTypes]);
-
-    const normalizedFormType = String(form.workTypeLabel || '').trim().toUpperCase();
-    const currentTypeValue = workTypeOptions.some((option) => option.value === normalizedFormType)
-        ? normalizedFormType
-        : (workTypeOptions[0]?.value ?? 'EXAMEN');
-
-    const average = grades.length === 0 ? null :
-        grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0) /
-        grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
-
-    const needed = simulateGrade(grades, Number(simulatorTarget));
-
-    const handleCreate = (e: React.FormEvent) => {
-        e.preventDefault();
-        const selectedType = workTypeOptions.find((option) => option.value === currentTypeValue);
-        createGrade(
-            {
-                ...form,
-                score: Number(form.score),
-                maxScore: Number(form.maxScore),
-                weight: Number(form.weight),
-                workTypeLabel: currentTypeValue,
-                percentage: selectedType?.weightPercent ?? undefined,
-                courseId
-            },
-            {
-                onSuccess: () => {
-                    setShowForm(false);
-                    setForm({
-                        name: '',
-                        score: '',
-                        maxScore: '20',
-                        weight: '1',
-                        workTypeLabel: workTypeOptions[0]?.value ?? 'EXAMEN'
-                    });
-                }
-            }
-        );
-    };
-
-    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse" />;
-
-    return (
-        <div className="flex flex-col gap-5 mt-5">
-            {/* Notes Header Section */}
-            <div className="flex justify-between items-end mb-2">
-                <div>
-                    <div className="text-[11px] font-bold text-[#A3A3A3] uppercase tracking-wider mb-2">
-                        Notes du cours
-                    </div>
-                    <div className="text-[14px] font-medium text-[#737373]">
-                        Moyenne pondérée : <span className="text-[#1A1A1A] font-bold">{average !== null ? `${average.toFixed(1)} / 20` : '— / 20'}</span>
-                    </div>
-                </div>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="bg-white border border-[#E5E5E5] text-[#1A1A1A] rounded-xl text-[14px] font-medium px-4 py-2 hover:bg-gray-50 flex items-center gap-2 transition-colors shadow-sm"
-                >
-                    + Ajouter une note
-                </button>
-            </div>
-
-            {/* Ajout Form dropdown */}
-            {showForm && (
-                <form onSubmit={handleCreate} className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[20px] p-5 flex flex-col gap-4">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <div className="col-span-2">
-                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Nom</label>
-                            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
-                        </div>
-                        <div>
-                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Note</label>
-                            <input type="number" step="0.5" value={form.score} onChange={(e) => setForm({ ...form, score: e.target.value })} required min={0} className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
-                        </div>
-                        <div>
-                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Sur</label>
-                            <input type="number" value={form.maxScore} onChange={(e) => setForm({ ...form, maxScore: e.target.value })} min={1} className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
-                        </div>
-                        <div>
-                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Coeff.</label>
-                            <input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} min={0.5} step="0.5" className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none" />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Type de note</label>
-                            <select
-                                value={currentTypeValue}
-                                onChange={(e) => setForm({ ...form, workTypeLabel: e.target.value })}
-                                className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-white text-[14px] font-medium outline-none"
-                            >
-                                {workTypeOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs text-[#737373] mb-1.5 block font-medium">Pondération appliquée</label>
-                            <input
-                                readOnly
-                                value={`${workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent ?? '-'}%`}
-                                className="w-full h-10 px-3 border border-[#E5E5E5] rounded-xl bg-[#F3F4F6] text-[14px] font-medium outline-none"
-                            />
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-3 mt-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-[14px] text-[#737373] font-medium hover:text-[#1A1A1A]">Annuler</button>
-                        <button type="submit" disabled={isCreating} className="bg-[#1A1A1A] text-white px-5 py-2 rounded-xl text-[14px] font-medium hover:bg-black">
-                            {isCreating ? 'En cours...' : 'Enregistrer'}
-                        </button>
-                    </div>
-                </form>
-            )}
-
-            {/* Notes List */}
-            {grades.length === 0 ? (
-                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px]">
-                    Aucune note enregistrée.
-                </div>
-            ) : (
-                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] flex flex-col pt-2 pb-2">
-                    {grades.map((grade, i) => {
-                        const typeLabel = typeToLabel(grade);
-                        const bStyle = getBadgeStyle(typeLabel);
-                        const numScoreColor = getScoreColor(grade.score, grade.maxScore);
-
-                        return (
-                            <div key={grade.id} className={`flex justify-between items-center px-6 py-4 ${i < grades.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
-                                <div>
-                                    <div className="text-[15px] font-bold text-[#1A1A1A] mb-1">{grade.name}</div>
-                                    <div className="text-[13px] text-[#737373]">
-                                        {typeLabel} · coeff. {grade.weight ?? 1}{grade.date ? ` ·  ${new Date(grade.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '')}` : ''}
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className={`px-2.5 py-0.5 rounded text-[12px] font-bold tracking-wide ${bStyle}`}>
-                                        {typeLabel}
-                                    </div>
-                                    <div className={`text-[17px] font-bold w-20 text-right ${numScoreColor}`}>
-                                        {grade.score} / {grade.maxScore}
-                                    </div>
-                                    <button className="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] rounded-lg hover:bg-white transition-colors">
-                                        {/* Crayon rouge ico */}
-                                        <svg className="w-3.5 h-3.5 text-[#E74C3C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Simulateur Container */}
-            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 mt-2">
-                <div className="text-[15px] font-bold text-[#1A1A1A] mb-2">Simulateur de moyenne</div>
-                <div className="text-[15px] text-[#737373] mb-5">Quelle note faut-il avoir au prochain examen pour atteindre {simulatorTarget || 10} / 20 ?</div>
-                
-                <div className="flex items-center gap-4">
-                    <span className="text-[15px] text-[#1A1A1A]">Objectif :</span>
-                    <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        step="0.5"
-                        value={simulatorTarget === '' ? '' : simulatorTarget}
-                        onChange={(e) => setSimulatorTarget(e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-[70px] h-[44px] border border-[#E5E5E5] bg-[#FAF9F6] rounded-xl text-center text-[15px] font-medium outline-none focus:border-[#A3A3A3] transition-colors"
-                    />
-                    <span className="text-[15px] text-[#1A1A1A] ml-2">→ Il te faut au moins</span>
-                    <span className="text-[17px] font-bold text-[#1A1A1A]">
-                        {needed !== null 
-                            ? needed > 20 
-                                ? 'Impossible — trop haut' 
-                                : needed < 0 
-                                    ? 'Déjà atteint !' 
-                                    : `${needed} / 20`
-                            : '— / 20'}
-                    </span>
-                </div>
-            </div>
-
-        </div>
+      }
     );
+  };
+
+  if (isLoading) return <div className="h-40 bg-surface-container-highest/50 rounded-xl animate-pulse" />;
+
+  return (
+    <div className="space-y-8">
+      {/* Notes Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-2 gap-4">
+        <div>
+          <div className="text-label-caps font-label-caps text-on-surface-variant mb-2">Notes du cours</div>
+          <div className="text-body-md font-body-md text-on-surface-variant">
+            Moyenne pondérée : <span className="text-on-surface font-bold">{average !== null ? `${average.toFixed(1)} / 20` : '— / 20'}</span>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="btn btn-outlined w-full sm:w-auto"
+        >
+          <span className="material-symbols-outlined text-[18px]">add</span>
+          Ajouter une note
+        </button>
+      </div>
+
+      {/* Add Form */}
+      {showForm && (
+        <form onSubmit={handleCreate} className="card card-padded space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="col-span-2">
+              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Nom</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                className="input input-bordered w-full h-12 text-base"
+                placeholder="Ex: Examen Mi-Semestre"
+              />
+            </div>
+            <div>
+              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Note</label>
+              <input
+                type="number"
+                step="0.5"
+                value={form.score}
+                onChange={(e) => setForm({ ...form, score: e.target.value })}
+                required
+                min={0}
+                className="input input-bordered w-full h-12 text-base"
+              />
+            </div>
+            <div>
+              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Sur</label>
+              <input
+                type="number"
+                value={form.maxScore}
+                onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
+                min={1}
+                className="input input-bordered w-full h-12 text-base"
+              />
+            </div>
+            <div>
+              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Coeff.</label>
+              <input
+                type="number"
+                value={form.weight}
+                onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                min={0.5}
+                step="0.5"
+                className="input input-bordered w-full h-12 text-base"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Type de note</label>
+              <select
+                value={currentTypeValue}
+                onChange={(e) => setForm({ ...form, workTypeLabel: e.target.value })}
+                className="input input-bordered w-full h-12 text-base"
+              >
+                {workTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Pondération appliquée</label>
+              <input
+                readOnly
+                value={`${workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent ?? '-'}%`}
+                className="input w-full h-12 text-base bg-surface-container"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-outline-variant">
+            <button type="button" onClick={() => setShowForm(false)} className="btn btn-outlined">Annuler</button>
+            <button type="submit" disabled={isCreating} className="btn btn-primary">
+              {isCreating ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Notes List */}
+      {grades.length === 0 ? (
+        <div className="card card-padded text-center text-on-surface-variant py-10">
+          <span className="material-symbols-outlined text-4xl mb-2 block text-outline">grade</span>
+          <p className="text-body-md font-body-md">Aucune note enregistrée.</p>
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <div className="p-card-padding border-b border-outline-variant bg-surface-bright">
+            <h3 className="text-label-caps font-label-caps text-on-surface-variant">Historique des notes</h3>
+          </div>
+          <div className="divide-y divide-outline-variant">
+            {grades.map((grade) => {
+              const typeLabel = typeToLabel(grade);
+              const badgeStyle = getBadgeStyle(typeLabel);
+              const scoreColor = getScoreColor(grade.score, grade.maxScore);
+
+              return (
+                <div key={grade.id} className="p-card-padding flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-body-md font-body-md font-medium text-on-surface mb-1 truncate">{grade.name}</div>
+                    <div className="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-2">
+                      <span>{typeLabel}</span>
+                      <span className="w-1 h-1 bg-outline-variant rounded-full" />
+                      <span>coeff. {grade.weight ?? 1}</span>
+                      {grade.date && (
+                        <span className="w-1 h-1 bg-outline-variant rounded-full" />
+                      )}
+                      {grade.date && (
+                        <span>{format(new Date(grade.date), 'd MMM yyyy', { locale: fr })}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`px-2.5 py-0.5 rounded text-label-caps font-label-caps ${badgeStyle}`}>
+                      {typeLabel}
+                    </span>
+                    <div className={`text-headline-sm font-headline-sm w-20 text-right ${scoreColor}`}>
+                      {grade.score} / {grade.maxScore}
+                    </div>
+                    <button className="p-2 rounded-full hover:bg-surface-container transition-colors" aria-label="Modifier la note">
+                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant">edit</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Simulator */}
+      <div className="card card-padded">
+        <div className="text-label-caps font-label-caps text-on-surface-variant mb-2">Simulateur de moyenne</div>
+        <div className="text-body-md font-body-md text-on-surface-variant mb-5">
+          Quelle note faut-il avoir au prochain examen pour atteindre {simulatorTarget || 10} / 20 ?
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="text-body-md font-body-md text-on-surface">Objectif :</span>
+          <input
+            type="number"
+            min="0"
+            max="20"
+            step="0.5"
+            value={simulatorTarget === '' ? '' : simulatorTarget}
+            onChange={(e) => setSimulatorTarget(e.target.value === '' ? '' : Number(e.target.value))}
+            className="w-[80px] h-12 input input-bordered text-center text-base"
+          />
+          <span className="text-body-md font-body-md text-on-surface ml-2">→ Il te faut au moins</span>
+          <span className="text-headline-sm font-headline-sm text-on-surface">
+            {needed !== null
+              ? needed > 20
+                ? 'Impossible — trop haut'
+                : needed < 0
+                  ? 'Déjà atteint !'
+                  : `${needed} / 20`
+              : '— / 20'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const TasksTab = ({ courseId }: { courseId: string }) => {
-    const { data: tasks = [], isLoading } = useTasks();
-    const { mutate: updateTask } = useUpdateTask();
+  const { data: tasks = [], isLoading } = useTasks();
+  const { mutate: updateTask } = useUpdateTask();
 
-    const courseTasks = tasks.filter((t) => t.courseId === courseId && !t.isDeleted);
+  const courseTasks = tasks.filter((t) => t.courseId === courseId && !t.isDeleted);
 
-    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse mt-5" />;
+  if (isLoading) return <div className="h-40 bg-surface-container-highest/50 rounded-xl animate-pulse" />;
 
-    if (courseTasks.length === 0) {
-        return (
-            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-5">
-                Aucune tâche pour ce cours.
-            </div>
-        );
-    }
-
+  if (courseTasks.length === 0) {
     return (
-        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] flex flex-col pt-2 pb-2 mt-5">
-            {courseTasks.map((task, i) => (
-                <div key={task.id} className={`flex items-center gap-4 px-6 py-4 ${i < courseTasks.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
-                    <input
-                        type="checkbox"
-                        className="w-5 h-5 rounded border-gray-300 text-[#1A1A1A] focus:ring-[#1A1A1A] cursor-pointer"
-                        checked={task.status === 'COMPLETED'}
-                        onChange={() => updateTask({ id: task.id, payload: { status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED' } })}
-                    />
-                    <div className="flex-1">
-                        <div className={`text-[15px] font-bold ${task.status === 'COMPLETED' ? 'line-through text-[#A3A3A3]' : 'text-[#1A1A1A]'}`}>
-                            {task.title}
-                        </div>
-                        {task.dueDate && (
-                            <div className="text-[13px] text-[#737373] mt-0.5">
-                                {new Date(task.dueDate).toLocaleDateString('fr-FR')}
-                            </div>
-                        )}
-                    </div>
-                    <div className={`px-2.5 py-0.5 rounded text-[12px] font-bold tracking-wide ${
-                        task.priority === 'CRITICAL' ? 'bg-[#FDF2F2] text-[#E74C3C]' :
-                        task.priority === 'HIGH' ? 'bg-[#FFF3E0] text-[#F97316]' :
-                        task.priority === 'MEDIUM' ? 'bg-[#FEF9C3] text-[#EAB308]' :
-                        'bg-[#F0FDF4] text-[#22C55E]'
-                    }`}>
-                        {task.priority}
-                    </div>
-                </div>
-            ))}
-        </div>
+      <div className="card card-padded text-center text-on-surface-variant py-10">
+        <span className="material-symbols-outlined text-4xl mb-2 block text-outline">task_alt</span>
+        <p className="text-body-md font-body-md">Aucune tâche pour ce cours.</p>
+      </div>
     );
-};
+  }
 
-// ─── Onglet Événements ─────────────────────────────────────
+  return (
+    <div className="card overflow-hidden">
+      <div className="p-card-padding border-b border-outline-variant bg-surface-bright">
+        <h3 className="text-label-caps font-label-caps text-on-surface-variant">Tâches du cours</h3>
+      </div>
+      <div className="divide-y divide-outline-variant">
+        {courseTasks.map((task) => (
+          <div key={task.id} className="p-card-padding flex items-center gap-4">
+            <button
+              className={`w-5 h-5 rounded border flex-shrink-0 cursor-pointer ${task.status === 'COMPLETED' ? 'bg-primary border-primary' : 'border-outline'}`}
+              onClick={() => updateTask({ id: task.id, payload: { status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED' } })}
+              aria-label={task.status === 'COMPLETED' ? 'Marquer comme à faire' : 'Marquer comme terminée'}
+            >
+              {task.status === 'COMPLETED' && <span className="material-symbols-outlined text-on-primary text-[18px]">check</span>}
+            </button>
+            <div className="flex-1 min-w-0">
+              <div className={`text-body-md font-body-md font-medium text-on-surface ${task.status === 'COMPLETED' ? 'line-through' : ''}`}>
+                {task.title}
+              </div>
+              {task.dueDate && (
+                <div className="text-label-sm font-label-sm text-on-surface-variant mt-0.5">
+                  {new Date(task.dueDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                </div>
+              )}
+            </div>
+            <span className={`px-2.5 py-0.5 rounded text-label-caps font-label-caps ${
+              task.priority === 'CRITICAL' || task.priority === 'HIGH' ? 'bg-error/10 text-error' :
+              task.priority === 'MEDIUM' ? 'bg-tertiary/10 text-tertiary' :
+              'bg-surface-container-highest text-on-surface-variant'
+            }`}>
+              {task.priority === 'CRITICAL' || task.priority === 'HIGH' ? 'Urgent' :
+               task.priority === 'MEDIUM' ? 'Moyen' : 'Faible'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const EventsTab = ({ courseId }: { courseId: string }) => {
-    const { data: events = [], isLoading } = useEvents();
+  const { data: events = [], isLoading } = useEvents();
 
-    const courseEvents = events
-        .filter((e) => e.courseId === courseId)
-        .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const courseEvents = events
+    .filter((e) => e.courseId === courseId)
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
-    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse mt-5" />;
+  if (isLoading) return <div className="h-40 bg-surface-container-highest/50 rounded-xl animate-pulse" />;
 
-    if (courseEvents.length === 0) {
-        return (
-            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-5">
-                Aucun événement pour ce cours.
-            </div>
-        );
-    }
-
+  if (courseEvents.length === 0) {
     return (
-        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] flex flex-col pt-2 pb-2 mt-5">
-            {courseEvents.map((event, i) => (
-                <div key={event.id} className={`flex items-center gap-4 px-6 py-4 ${i < courseEvents.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
-                    <div className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: '#1A1A1A' }} />
-                    <div className="flex-1">
-                        <div className="text-[15px] font-bold text-[#1A1A1A]">{event.title}</div>
-                        <div className="text-[13px] text-[#737373] mt-0.5">
-                            {new Date(event.startDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                            {' · '}
-                            {new Date(event.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                            {' – '}
-                            {new Date(event.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                    </div>
-                    <div className="px-2.5 py-0.5 rounded text-[12px] font-bold tracking-wide bg-[#F3F4F6] text-[#4B5563]">
-                        {event.type}
-                    </div>
-                </div>
-            ))}
-        </div>
+      <div className="card card-padded text-center text-on-surface-variant py-10">
+        <span className="material-symbols-outlined text-4xl mb-2 block text-outline">event</span>
+        <p className="text-body-md font-body-md">Aucun événement pour ce cours.</p>
+      </div>
     );
-};
+  }
 
-// ─── Onglet Risque ─────────────────────────────────────────
+  return (
+    <div className="card overflow-hidden">
+      <div className="p-card-padding border-b border-outline-variant bg-surface-bright">
+        <h3 className="text-label-caps font-label-caps text-on-surface-variant">Événements du cours</h3>
+      </div>
+      <div className="divide-y divide-outline-variant">
+        {courseEvents.map((event) => (
+          <div key={event.id} className="p-card-padding flex items-center gap-4">
+            <div className="w-1.5 self-stretch rounded-full shrink-0 bg-on-surface-variant" />
+            <div className="flex-1 min-w-0">
+              <div className="text-body-md font-body-md font-medium text-on-surface">{event.title}</div>
+              <div className="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1.5 mt-0.5">
+                <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                {new Date(event.startDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                <span className="w-1 h-1 bg-outline-variant rounded-full" />
+                {new Date(event.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} –{' '}
+                {new Date(event.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
+            <span className="px-2.5 py-0.5 rounded text-label-caps font-label-caps bg-surface-container text-on-surface-variant">
+              {event.type}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const RiskTab = ({ courseId }: { courseId: string }) => {
-    const { data: risk, isLoading } = useRisk(courseId);
+  const { data: risk, isLoading } = useRisk(courseId);
 
-    if (isLoading) return <div className="h-40 bg-gray-100 rounded-[20px] animate-pulse mt-5" />;
+  if (isLoading) return <div className="h-40 bg-surface-container-highest/50 rounded-xl animate-pulse" />;
 
-    if (!risk) {
-        return (
-            <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-5">
-                Données insuffisantes pour calculer le risque.
-            </div>
-        );
-    }
-
-    const factors = [
-        { label: 'Performance', value: risk.details.performance },
-        { label: 'Procrastination', value: risk.details.procrastination },
-        { label: 'Pression examen', value: risk.details.pressure },
-    ];
-
-    const riskLevel = risk.level || 'LOW';
-    const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
-
+  if (!risk) {
     return (
-        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-6 mt-5 flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <div className="text-[13px] text-[#737373] font-medium mb-1">Score de risque global</div>
-                    <div className={`text-[36px] font-bold ${rStyle.text} leading-none`}>
-                        {risk.overallScore}
-                        <span className="text-[17px] text-[#A3A3A3] ml-1">/ 100</span>
-                    </div>
-                </div>
-                <div className={`px-3 py-1 rounded-lg text-[13px] font-bold tracking-widest uppercase ${rStyle.bg} ${rStyle.text}`}>
-                    {risk.level}
-                </div>
-            </div>
-
-            <div className="flex flex-col gap-4">
-                {factors.map((f) => (
-                    <div key={f.label}>
-                        <div className="flex justify-between items-end mb-1.5">
-                            <span className="text-[14px] text-[#737373] font-medium">{f.label}</span>
-                            <span className="text-[14px] font-bold text-[#1A1A1A]">{f.value}%</span>
-                        </div>
-                        <div className="h-2 bg-[#E5E5E5] rounded-full overflow-hidden">
-                            <div
-                                className="h-full rounded-full transition-all duration-500"
-                                style={{
-                                    width: `${f.value}%`,
-                                    background: f.value >= 70 ? '#E74C3C' : f.value >= 40 ? '#F59E0B' : '#22C55E'
-                                }}
-                            />
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+      <div className="card card-padded text-center text-on-surface-variant py-10">
+        <span className="material-symbols-outlined text-4xl mb-2 block text-outline">analytics</span>
+        <p className="text-body-md font-body-md">Données insuffisantes pour calculer le risque.</p>
+      </div>
     );
+  }
+
+  const factors = [
+    { label: 'Performance', value: risk.details.performance },
+    { label: 'Procrastination', value: risk.details.procrastination },
+    { label: 'Pression examen', value: risk.details.pressure },
+  ];
+
+  const riskLevel = risk.level || 'LOW';
+  const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
+
+  return (
+    <div className="card card-padded space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <div className="text-label-sm font-label-sm text-on-surface-variant mb-1">Score de risque global</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-display-lg font-display-lg text-on-surface">{risk.overallScore}</span>
+            <span className="text-headline-md font-headline-md text-on-surface-variant">/ 100</span>
+          </div>
+        </div>
+        <span className={`px-3 py-1 rounded text-label-caps font-label-caps ${rStyle.bg} ${rStyle.text}`}>
+          {risk.level}
+        </span>
+      </div>
+
+      <div className="space-y-4">
+        {factors.map((f) => (
+          <div key={f.label} className="p-4 rounded-lg bg-surface-container-lowest border border-outline-variant">
+            <div className="flex justify-between items-end mb-1.5">
+              <span className="text-label-sm font-label-sm text-on-surface">{f.label}</span>
+              <span className="text-label-sm font-label-sm text-on-surface">{f.value}%</span>
+            </div>
+            <div className="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${f.value}%`,
+                  background: f.value >= 70 ? 'var(--color-error)' : f.value >= 40 ? 'var(--color-tertiary)' : 'var(--color-primary)'
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
-// ─── Onglets génériques pour le moment ─────────────────────
-
 const placeholderSection = (text: string) => (
-    <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] p-10 text-center text-[#737373] text-[15px] mt-6">
-        {text}
-    </div>
+  <div className="card card-padded text-center text-on-surface-variant py-10">
+    <span className="material-symbols-outlined text-4xl mb-2 block text-outline">construction</span>
+    <p className="text-body-md font-body-md">{text}</p>
+  </div>
 );
 
-// ─── Page principale (Détails) ─────────────────────────────
-
 export default function CourseDetailPage() {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<Tab>('notes');
-    const [showEditModal, setShowEditModal] = useState(false);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>('notes');
+  const [showEditModal, setShowEditModal] = useState(false);
 
-    const { data: course, isLoading } = useCourse(id ?? '');
-    const { data: grades = [] } = useGrades(id ?? '');
-    const { data: tasks = [] } = useTasks();
-    const { data: risk } = useRisk(id ?? '');
+  const { data: course, isLoading } = useCourse(id ?? '');
+  const { data: grades = [] } = useGrades(id ?? '');
+  const { data: tasks = [] } = useTasks();
+  const { data: risk } = useRisk(id ?? '');
 
-    const courseTasks = tasks.filter(t => t.courseId === id && !t.isDeleted);
-    
-    // Average
-    const average = grades.length === 0 ? null :
-        grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 20) * (g.weight ?? 1), 0) /
-        grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
+  const courseTasks = tasks.filter(t => t.courseId === id && !t.isDeleted);
 
-    const riskLevel = risk?.level || 'LOW';
-    const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
+  const average = grades.length === 0 ? null :
+    grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 100) * (g.weight ?? 1), 0) /
+    grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
 
-    if (isLoading) return <div className="max-w-4xl mx-auto h-[300px] bg-gray-50 rounded-[20px] animate-pulse" />;
-    
-    if (!course) {
-        return (
-            <div className="text-center py-16 text-[#737373]">
-                <div className="flex justify-center mb-3">
-                    <Search size={36} className="opacity-20" />
-                </div>
-                <div className="text-sm">Cours introuvable</div>
-                <button onClick={() => navigate('/courses')} className="mt-4 text-[#1A1A1A] underline">← Retour aux cours</button>
-            </div>
-        );
-    }
+  const riskLevel = risk?.level || 'LOW';
+  const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
 
-    const tabs: { key: Tab; label: string }[] = [
-        { key: 'notes', label: 'Notes' },
-        { key: 'travaux', label: 'Travaux' },
-        { key: 'taches', label: 'Tâches' },
-        { key: 'evenements', label: 'Événements' },
-        { key: 'risque', label: 'Risque' },
-    ];
+  if (isLoading) return <div className="max-w-4xl mx-auto h-[300px] bg-surface-container-highest/50 rounded-xl animate-pulse" />;
 
+  if (!course) {
     return (
-        <div className="max-w-[900px] mx-auto pb-10 px-2 lg:px-4">
-
-            {/* Back action */}
-            <button
-                onClick={() => navigate('/courses')}
-                className="text-[14px] font-medium text-[#737373] hover:text-[#1A1A1A] transition-colors mb-4 flex items-center gap-1.5"
-            >
-                ← Mes cours
-            </button>
-
-            {/* Title Section */}
-            <div className="flex justify-between items-start mb-6">
-                <div>
-                    <div className="flex items-center gap-3 mb-1">
-                        <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: course.color }} />
-                        <h1 className="text-[26px] font-semibold text-[#1A1A1A] tracking-tight">{course.name}</h1>
-                    </div>
-                    <div className="text-[14px] text-[#737373] font-medium ml-6.5">
-                        {course.code} · {course.credits ?? 3} crédits
-                    </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-widest uppercase ${rStyle.bg} ${rStyle.text}`}>
-                        {riskLevel}
-                    </div>
-                    <button 
-                        onClick={() => setShowEditModal(true)}
-                        className="bg-white border border-[#E5E5E5] text-[#1A1A1A] text-[15px] font-medium rounded-xl px-5 py-2 hover:bg-gray-50 transition-colors shadow-sm"
-                    >
-                        Modifier
-                    </button>
-                </div>
-            </div>
-
-            {/* Top 4 Stats Columns */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-                {/* Moyenne */}
-                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
-                    <div className="text-[26px] font-medium text-[#1A1A1A] leading-tight">
-                        {average !== null ? average.toFixed(1) : '-'}
-                    </div>
-                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Moyenne</div>
-                </div>
-                {/* Notes */}
-                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
-                    <div className="text-[26px] font-medium text-[#1A1A1A] leading-tight">
-                        {grades.length}
-                    </div>
-                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Notes</div>
-                </div>
-                {/* Tâches */}
-                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
-                    <div className="text-[26px] font-medium text-[#1A1A1A] leading-tight">
-                        {courseTasks.length}
-                    </div>
-                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Tâches</div>
-                </div>
-                {/* Score risque */}
-                <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[18px] py-4 flex flex-col items-center justify-center">
-                    <div className="text-[26px] font-medium text-[#E74C3C] leading-tight">
-                        {Math.round(risk?.overallScore || 0)}
-                    </div>
-                    <div className="text-[13px] text-[#737373] mt-0.5 font-medium">Score risque</div>
-                </div>
-            </div>
-
-            {/* Nav Tabs */}
-            <div className="flex border-b border-[#E5E5E5] overflow-x-auto select-none no-scrollbar">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        className={`px-5 py-3 text-[15px] font-medium transition-colors border-b-2 whitespace-nowrap ${
-                            activeTab === tab.key 
-                            ? 'text-[#1A1A1A] border-[#1A1A1A]' 
-                            : 'text-[#737373] border-transparent hover:text-[#1A1A1A]'
-                        }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-                {/* Espace flexible pour aller jusqu'au bout */}
-                <div className="flex-1"></div>
-            </div>
-
-            {/* Tab content */}
-            <div>
-                {activeTab === 'notes' && <NotesTab courseId={id ?? ''} />}
-                {activeTab === 'travaux' && placeholderSection("L'onglet Travaux sera bientôt implémenté.")}
-                {activeTab === 'taches' && <TasksTab courseId={id ?? ''} />}
-                {activeTab === 'evenements' && <EventsTab courseId={id ?? ''} />}
-                {activeTab === 'risque' && <RiskTab courseId={id ?? ''} />}
-            </div>
-
-            {showEditModal && course && (
-                <CourseFormModal course={course} onClose={() => setShowEditModal(false)} />
-            )}
-
-        </div>
+      <div className="text-center py-16 text-on-surface-variant max-w-4xl mx-auto">
+        <span className="material-symbols-outlined text-6xl mb-3 block text-outline">school</span>
+        <h2 className="text-headline-md font-headline-md text-on-surface mb-2">Cours introuvable</h2>
+        <button onClick={() => navigate('/courses')} className="mt-4 btn btn-outlined">
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Retour aux cours
+        </button>
+      </div>
     );
+  }
+
+  const tabs: { key: Tab; label: string; icon: string }[] = [
+    { key: 'notes', label: 'Notes', icon: 'grade' },
+    { key: 'travaux', label: 'Travaux', icon: 'assignment' },
+    { key: 'taches', label: 'Tâches', icon: 'task_alt' },
+    { key: 'evenements', label: 'Événements', icon: 'event' },
+    { key: 'risque', label: 'Risque', icon: 'analytics' },
+  ];
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 pb-10">
+      {/* Back Action */}
+      <button
+        onClick={() => navigate('/courses')}
+        className="btn btn-text"
+      >
+        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+        Mes cours
+      </button>
+
+      {/* Hero Section */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: course.color }} />
+            <h1 className="text-display-lg font-display-lg text-on-surface">{course.name}</h1>
+          </div>
+          <div className="text-body-lg font-body-lg text-on-surface-variant ml-6.5">
+            {course.code} • {course.credits ?? 3} crédits
+          </div>
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <span className={`px-3 py-1 rounded text-label-caps font-label-caps ${rStyle.bg} ${rStyle.text}`}>
+            {riskLevel}
+          </span>
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="btn btn-outlined"
+          >
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+            Modifier
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Bento Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-gutter mb-8">
+        <div className="card card-padded flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-primary">analytics</span>
+            <span className="text-label-caps font-label-caps text-on-surface-variant">Moyenne</span>
+          </div>
+          <div className="text-display-lg font-display-lg text-on-surface">
+            {average !== null ? average.toFixed(1) : '-'}
+            <span className="text-body-md text-on-surface-variant">/ 20</span>
+          </div>
+        </div>
+        <div className="card card-padded flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-primary">grade</span>
+            <span className="text-label-caps font-label-caps text-on-surface-variant">Notes</span>
+          </div>
+          <div className="text-display-lg font-display-lg text-on-surface">{grades.length}</div>
+        </div>
+        <div className="card card-padded flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-primary">task_alt</span>
+            <span className="text-label-caps font-label-caps text-on-surface-variant">Tâches</span>
+          </div>
+          <div className="text-display-lg font-display-lg text-on-surface">{courseTasks.length}</div>
+        </div>
+        <div className="card card-padded flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-error">shield</span>
+            <span className="text-label-caps font-label-caps text-on-surface-variant">Risque</span>
+          </div>
+          <div className="text-display-lg font-display-lg text-error">{Math.round(risk?.overallScore || 0)}</div>
+        </div>
+      </div>
+
+      {/* Nav Tabs */}
+      <div className="flex border-b border-outline-variant overflow-x-auto mb-6" role="tablist">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={`flex items-center gap-2 px-5 py-3 text-body-md font-body-md transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === tab.key
+                ? 'text-primary border-primary font-medium'
+                : 'text-on-surface-variant border-transparent hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div role="tabpanel">
+        {activeTab === 'notes' && <NotesTab courseId={id ?? ''} />}
+        {activeTab === 'travaux' && placeholderSection("L'onglet Travaux sera bientôt implémenté.")}
+        {activeTab === 'taches' && <TasksTab courseId={id ?? ''} />}
+        {activeTab === 'evenements' && <EventsTab courseId={id ?? ''} />}
+        {activeTab === 'risque' && <RiskTab courseId={id ?? ''} />}
+      </div>
+
+      {showEditModal && course && (
+        <CourseFormModal course={course} onClose={() => setShowEditModal(false)} />
+      )}
+    </div>
+  );
 }

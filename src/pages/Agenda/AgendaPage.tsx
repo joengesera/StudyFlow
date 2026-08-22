@@ -11,129 +11,126 @@ import { EventModal } from './components/EventModal';
 import { SelectedDayEventsList } from './components/SelectedDayEventsList';
 import { WeeklyPlanner } from './components/WeeklyPlanner';
 import {
-    type AgendaCourse,
-    type AgendaViewMode,
-    getEventsForDay,
-    sortEventsByStartDate,
+  type AgendaCourse,
+  type AgendaViewMode,
+  getEventsForDay,
+  sortEventsByStartDate,
 } from './agendaShared';
 
 export default function AgendaPage() {
-    const { data: events = [], isLoading: eventsLoading } = useEvents();
-    const { data: courses = [] } = useCourses();
-    const { mutateAsync: createEventAsync, isPending: isCreating } = useCreateEvent();
-    const { mutate: updateEvent } = useUpdateEvent();
-    const { mutate: deleteEvent } = useDeleteEvent();
+  const { data: events = [], isLoading: eventsLoading } = useEvents();
+  const { data: courses = [] } = useCourses();
+  const { mutateAsync: createEventAsync, isPending: isCreating } = useCreateEvent();
+  const { mutate: updateEvent } = useUpdateEvent();
+  const { mutate: deleteEvent } = useDeleteEvent();
 
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDay, setSelectedDay] = useState(new Date());
-    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeCourseFilter, setActiveCourseFilter] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<AgendaViewMode>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeCourseFilter, setActiveCourseFilter] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<AgendaViewMode>('week');
 
-    const activeCourses: AgendaCourse[] = courses
-        .filter((course) => !course.isDeleted)
-        .map((course) => ({ id: course.id, name: course.name, color: course.color }));
+  const activeCourses: AgendaCourse[] = courses
+    .filter((course) => !course.isDeleted)
+    .map((course) => ({ id: course.id, name: course.name, color: course.color }));
 
-    const filteredEvents = activeCourseFilter
-        ? events.filter((event) => event.courseId === activeCourseFilter)
-        : events;
+  const filteredEvents = activeCourseFilter
+    ? events.filter((event) => event.courseId === activeCourseFilter)
+    : events;
 
-    const selectedDayEvents = sortEventsByStartDate(getEventsForDay(filteredEvents, selectedDay));
+  const selectedDayEvents = sortEventsByStartDate(getEventsForDay(filteredEvents, selectedDay));
 
-    const handlePreviousPeriod = () => {
-        setCurrentDate(viewMode === 'month' ? subMonths(currentDate, 1) : subWeeks(currentDate, 1));
-    };
+  const handlePreviousPeriod = () => {
+    setCurrentDate(viewMode === 'month' ? subMonths(currentDate, 1) : subWeeks(currentDate, 1));
+  };
 
-    const handleNextPeriod = () => {
-        setCurrentDate(viewMode === 'month' ? addMonths(currentDate, 1) : addWeeks(currentDate, 1));
-    };
+  const handleNextPeriod = () => {
+    setCurrentDate(viewMode === 'month' ? addMonths(currentDate, 1) : addWeeks(currentDate, 1));
+  };
 
-    const handleToday = () => {
-        const today = new Date();
-        setCurrentDate(today);
-        setSelectedDay(today);
-    };
+  const handleToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDay(today);
+  };
 
-    const handleCreateEvents = async (payloads: Partial<Event>[]) => {
-        try {
-            for (const payload of payloads) {
-                await createEventAsync(payload as Omit<Event, 'id'>);
-            }
-            setShowCreateModal(false);
-        } catch (error) {
-            console.error('Erreur lors de la création multiple:', error);
-        }
-    };
+  const handleCreateEvents = async (payloads: Partial<Event>[]) => {
+    try {
+      for (const payload of payloads) {
+        await createEventAsync(payload as Omit<Event, 'id'>);
+      }
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error('Erreur lors de la création multiple:', error);
+    }
+  };
 
-    return (
-        <div className="max-w-[1400px] mx-auto flex flex-col px-4 md:px-6 pb-20 md:pb-10 pt-2 md:pt-4">
-            <AgendaHeader
-                currentDate={currentDate}
-                viewMode={viewMode}
-                onPrevious={handlePreviousPeriod}
-                onNext={handleNextPeriod}
-                onToday={handleToday}
-                onViewModeChange={setViewMode}
-                onCreateEvent={() => setShowCreateModal(true)}
-            />
+  return (
+    <div className="space-y-0">
+      <AgendaHeader
+        currentDate={currentDate}
+        viewMode={viewMode}
+        onPrevious={handlePreviousPeriod}
+        onNext={handleNextPeriod}
+        onToday={handleToday}
+        onViewModeChange={setViewMode}
+        onCreateEvent={() => setShowCreateModal(true)}
+      />
 
-            <CourseFilterBar
-                activeCourseFilter={activeCourseFilter}
-                courses={activeCourses}
-                onSelectCourse={(courseId) =>
-                    setActiveCourseFilter((currentFilter) => (currentFilter === courseId ? null : courseId))
-                }
-                onReset={() => setActiveCourseFilter(null)}
-            />
+      <CourseFilterBar
+        activeCourseFilter={activeCourseFilter}
+        courses={activeCourses}
+        onSelectCourse={(courseId) => setActiveCourseFilter((currentFilter) => (currentFilter === courseId ? null : courseId))}
+        onReset={() => setActiveCourseFilter(null)}
+      />
 
-            {eventsLoading ? (
-                <div className="h-[500px] w-full bg-[#FAF9F6] border border-[#E5E5E5] rounded-[24px] mt-6 animate-pulse" />
-            ) : viewMode === 'month' ? (
-                <CalendarGrid
-                    currentMonth={currentDate}
-                    events={filteredEvents}
-                    courses={activeCourses}
-                    selectedDay={selectedDay}
-                    onSelectDay={setSelectedDay}
-                />
-            ) : (
-                <WeeklyPlanner
-                    currentDate={currentDate}
-                    events={filteredEvents}
-                    courses={activeCourses}
-                    onSelectEvent={setSelectedEvent}
-                />
-            )}
+      {eventsLoading ? (
+        <div className="card h-[500px] animate-pulse" />
+      ) : viewMode === 'month' ? (
+        <>
+          <CalendarGrid
+            currentMonth={currentDate}
+            events={filteredEvents}
+            courses={activeCourses}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+          />
+          <SelectedDayEventsList
+            selectedDay={selectedDay}
+            events={selectedDayEvents}
+            courses={activeCourses}
+            onSelectEvent={setSelectedEvent}
+          />
+        </>
+      ) : (
+        <WeeklyPlanner
+          currentDate={currentDate}
+          events={filteredEvents}
+          courses={activeCourses}
+          onSelectEvent={setSelectedEvent}
+        />
+      )}
 
-            {viewMode === 'month' && (
-                <SelectedDayEventsList
-                    selectedDay={selectedDay}
-                    events={selectedDayEvents}
-                    courses={activeCourses}
-                    onSelectEvent={setSelectedEvent}
-                />
-            )}
+      {selectedEvent && (
+        <EventModal
+          event={selectedEvent}
+          courseColor={activeCourses.find((course) => course.id === selectedEvent.courseId)?.color}
+          onClose={() => setSelectedEvent(null)}
+          onDelete={deleteEvent}
+          onUpdate={(id, payload) => updateEvent({ id, payload })}
+        />
+      )}
 
-            {selectedEvent && (
-                <EventModal
-                    event={selectedEvent}
-                    courseColor={activeCourses.find((course) => course.id === selectedEvent.courseId)?.color}
-                    onClose={() => setSelectedEvent(null)}
-                    onDelete={deleteEvent}
-                    onUpdate={(id, payload) => updateEvent({ id, payload })}
-                />
-            )}
-
-            {showCreateModal && (
-                <CreateEventModal
-                    defaultDate={selectedDay}
-                    courses={activeCourses}
-                    onClose={() => setShowCreateModal(false)}
-                    onCreate={handleCreateEvents}
-                    isLoading={isCreating}
-                />
-            )}
-        </div>
-    );
+      {showCreateModal && (
+        <CreateEventModal
+          defaultDate={selectedDay}
+          courses={activeCourses}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateEvents}
+          isLoading={isCreating}
+        />
+      )}
+    </div>
+  );
 }

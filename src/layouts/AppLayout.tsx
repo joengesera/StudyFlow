@@ -1,262 +1,210 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import {
-    LayoutDashboard,
-    BookOpen,
-    CalendarDays,
-    CheckSquare,
-    ClipboardList,
-    AlertTriangle,
-    User,
-    LogOut,
-    Bell,
-    Menu,
-    RefreshCw,
-    WifiOff,
-} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useNetworkSync } from '../hooks/useNetworkSync';
 import { useSyncStore } from '../stores/syncStore';
-import logo from '@/assets/Fichier1.svg'
+import logo from '@/assets/Fichier1.svg';
 
 const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/courses', icon: BookOpen, label: 'Cours' },
-    { to: '/agenda', icon: CalendarDays, label: 'Planning' },
-    { to: '/tasks', icon: CheckSquare, label: 'Taches' },
-    { to: '/works', icon: ClipboardList, label: 'Works' },
-    { to: '/risk', icon: AlertTriangle, label: 'Risque' },
+  { to: '/dashboard', icon: 'dashboard', label: 'Tableau de bord' },
+  { to: '/courses', icon: 'school', label: 'Cours' },
+  { to: '/agenda', icon: 'calendar_month', label: 'Planning' },
+  { to: '/tasks', icon: 'task_alt', label: 'Tâches' },
+  { to: '/works', icon: 'assignment', label: 'Travaux' },
+  { to: '/risk', icon: 'analytics', label: 'Analyse de risque' },
 ];
 
-const routeTitles: Record<string, string> = {
-    '/dashboard': 'Dashboard',
-    '/courses': 'Mes cours',
-    '/agenda': 'Planning',
-    '/tasks': 'Taches',
-    '/works': 'Travaux',
-    '/risk': 'Analyse de risque',
-    '/profile': 'Mon profil',
-};
+const bottomNavItems = [
+  { to: '/settings', icon: 'settings', label: 'Paramètres' },
+  { to: '/profile', icon: 'account_circle', label: 'Profil' },
+  { to: '/logout', icon: 'logout', label: 'Déconnexion', isLogout: true },
+];
 
 export default function AppLayout() {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { logout } = useAuth();
-    const location = useLocation();
-    const { isOnline, isSyncing } = useNetworkSync();
-    const isSyncReady = useSyncStore((state) => state.isReady);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout } = useAuth();
+  const location = useLocation();
+  const isSyncReady = useSyncStore((state) => state.isReady);
 
-    // Fermeture de la sidebar sur mobile après navigation
-    useEffect(() => {
-        if (window.innerWidth < 768) {
-            setSidebarOpen(false);
-        }
-    }, [location.pathname]);
-
-    const handleLogout = () => {
-        logout();
-    };
-
-    // Obtenir le titre de la route actuelle
-    const currentPath = location.pathname;
-    const routeTitle = routeTitles[Object.keys(routeTitles).find(k => currentPath.startsWith(k)) || '/dashboard'] || 'Dashboard';
-
-    const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    const dateFormatted = new Date().toLocaleDateString('fr-FR', dateOptions);
-
-    if (!isSyncReady) {
-        return (
-            <div className="h-screen w-full bg-[#FAF9F6] flex items-center justify-center">
-                <div className="text-[14px] font-bold text-[#737373] uppercase tracking-wide">
-                    Initialisation hors ligne...
-                </div>
-            </div>
-        );
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
     }
+  }, [location.pathname]);
 
+  const handleLogout = () => {
+    logout();
+  };
+
+  const currentPath = location.pathname;
+  const getActivePath = () => {
+    const matched = Object.keys({ '/dashboard': 1, '/courses': 1, '/agenda': 1, '/tasks': 1, '/works': 1, '/risk': 1, '/profile': 1, '/settings': 1 })
+      .find(k => currentPath.startsWith(k));
+    return matched || '/dashboard';
+  };
+  const activePath = getActivePath();
+
+  if (!isSyncReady) {
     return (
-        <div className="flex h-screen bg-[#FAF9F6] overflow-hidden font-sans text-base">
-            
-            {/* ── OVERLAY mobile ── */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/20 z-30 md:hidden backdrop-blur-sm"
-                    onClick={() => setSidebarOpen(false)}
-                />
-            )}
-
-            {/* ── SIDEBAR ── */}
-            <aside className={`
-                fixed md:static inset-y-0 left-0 z-50 
-                w-[260px] md:w-[90px] bg-white md:bg-[#FAF9F6] 
-                flex flex-col items-start md:items-center py-6 shrink-0 
-                transition-transform duration-300 ease-in-out
-                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-                shadow-2xl md:shadow-none
-            `}>
-                {/* Logo */}
-                <div className="w-12 h-12 rounded-[14px] bg-[#1A1A1A] text-white flex items-center justify-center font-bold text-[18px] mb-8 shadow-sm tracking-tighter ml-6 md:ml-0 shrink-0">
-                    <img src={logo} alt="logo" className="w-8 h-8" />
-                </div>
-
-                {/* Bouton fermeture mobile */}
-                <button 
-                    className="md:hidden absolute top-7 right-6 w-10 h-10 flex items-center justify-center bg-[#FAF9F6] rounded-full text-[#1A1A1A]"
-                    onClick={() => setSidebarOpen(false)}
-                >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1L13 13M1 13L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                </button>
-
-                {/* Navigation principale */}
-                <nav className="flex flex-col gap-2 w-full">
-                    {navItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                title={item.label}
-                                className={() => `
-                                    relative flex items-center md:justify-center w-full h-[60px] cursor-pointer group px-6 md:px-0
-                                `}
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        {/* Indicateur actif vertical */}
-                                        {isActive && (
-                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-[#1A1A1A] rounded-r-md transition-all" />
-                                        )}
-
-                                        {/* Icone */}
-                                        <div className={`
-                                            w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all duration-200 shrink-0
-                                            ${isActive 
-                                                ? 'bg-[#FAF9F6] md:bg-white md:shadow-sm' 
-                                                : 'opacity-40 group-hover:bg-[#E5E5E5] group-hover:opacity-100'
-                                            }
-                                        `}>
-                                            <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="text-[#1A1A1A]" />
-                                        </div>
-
-                                        {/* Label Mobile */}
-                                        <span className={`md:hidden ml-4 text-[15px] font-bold ${isActive ? 'text-[#1A1A1A]' : 'text-[#737373] opacity-60'}`}>
-                                            {item.label}
-                                        </span>
-                                    </>
-                                )}
-                            </NavLink>
-                        );
-                    })}
-                </nav>
-
-                {/* Navigation secondaire (Bottom) */}
-                <div className="mt-auto flex flex-col md:items-center gap-2 md:gap-4 w-full px-6 md:px-0 pb-4 md:pb-0">
-                    <NavLink
-                        to="/profile"
-                        title="Profil"
-                        className={() => `
-                            relative flex items-center md:justify-center w-full h-[60px] cursor-pointer group
-                        `}
-                    >
-                        {({ isActive }) => (
-                            <>
-                                {isActive && (
-                                    <div className="absolute left-[-24px] md:left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-[#1A1A1A] rounded-r-md" />
-                                )}
-                                <div className={`
-                                    w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all duration-200 shrink-0
-                                    ${isActive ? 'bg-[#FAF9F6] md:bg-white md:shadow-sm' : 'opacity-40 group-hover:bg-[#E5E5E5] group-hover:opacity-100'}
-                                `}>
-                                    <User size={20} strokeWidth={2} className="text-[#1A1A1A]" />
-                                </div>
-                                <span className={`md:hidden ml-4 text-[15px] font-bold ${isActive ? 'text-[#1A1A1A]' : 'text-[#737373] opacity-60'}`}>
-                                    Profil
-                                </span>
-                            </>
-                        )}
-                    </NavLink>
-
-                    <button
-                        onClick={handleLogout}
-                        className="relative flex items-center md:justify-center w-full h-[60px] cursor-pointer group px-6 md:px-0"
-                        title="Se deconnecter"
-                    >
-                        <div className="w-[44px] h-[44px] rounded-[14px] md:rounded-full flex items-center justify-center bg-[#FEF2F2] md:bg-[#1A1A1A] text-[#EF4444] md:text-white shrink-0 group-hover:bg-[#FECACA] md:group-hover:opacity-80 transition-all md:shadow-sm md:group-hover:scale-105">
-                            <LogOut size={18} strokeWidth={2.5} className="ml-0.5" />
-                        </div>
-                        <span className="md:hidden ml-4 text-[15px] font-bold text-[#EF4444]">
-                            Deconnexion
-                        </span>
-                    </button>
-                </div>
-            </aside>
-
-            {/* ── CONTENU PRINCIPAL ── */}
-            <main className="flex-1 flex flex-col h-screen md:py-4 md:pr-4 overflow-hidden w-full relative z-10">
-
-                {/* Mobile Header (hors cadre blanc) */}
-                <div className="md:hidden flex items-center justify-between p-4 bg-[#FAF9F6]">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-[#E5E5E5]"
-                        >
-                            <Menu size={18} className="text-[#1A1A1A]" />
-                        </button>
-                        <div className="font-bold text-[#1A1A1A] text-[18px]">{routeTitle}</div>
-                    </div>
-                </div>
-
-                {/* Grand Cadre Blanc (Application Content) */}
-                <div className="flex-1 bg-white md:rounded-[24px] md:border border-[#E5E5E5] shadow-sm flex flex-col overflow-hidden relative">
-                    
-                    {/* Header Interne */}
-                    <header className="px-6 md:px-8 py-5 border-b border-[#E5E5E5] flex justify-between items-center bg-white z-10 shrink-0">
-                        {/* Titre (masque sur mobile car deja dans le mobile header hors cadre) */}
-                        <h1 className="text-[20px] font-bold text-[#1A1A1A] tracking-tight hidden md:block">
-                            {routeTitle}
-                        </h1>
-                        
-                        <div className="flex-1 md:hidden" />
-
-                        {/* Actions à droite */}
-                        <div className="flex items-center gap-5">
-                            <div className="text-[14px] font-bold text-[#737373] capitalize truncate max-w-[150px] sm:max-w-none">
-                                {dateFormatted}
-                            </div>
-
-                            {/* Indicateurs de synchronisation */}
-                            {!isOnline && (
-                                <span className="bg-[#FEF2F2] text-[#EF4444] px-2.5 py-1 rounded-[6px] text-[12px] font-bold tracking-widest uppercase flex items-center gap-1.5">
-                                    <WifiOff size={12} />
-                                    Hors ligne
-                                </span>
-                            )}
-                            {isOnline && isSyncing && (
-                                <span className="bg-[#FEF3C7] text-[#F59E0B] px-2.5 py-1 rounded-[6px] text-[12px] font-bold tracking-widest uppercase flex items-center gap-1.5">
-                                    <RefreshCw size={12} className="animate-spin" />
-                                    Sync...
-                                </span>
-                            )}
-
-                            {/* Notification Bell */}
-                            <button className="relative hover:opacity-80 transition-opacity flex items-center justify-center cursor-pointer w-9 h-9">
-                                <Bell size={20} className="text-[#1A1A1A]" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-[#F59E0B] rounded-full border-2 border-white shadow-sm" />
-                            </button>
-                        </div>
-                    </header>
-
-                    {/* Zone d'affichage des Pages */}
-                    <div className="flex-1 overflow-y-auto scrollbar-thin">
-                        <div className="h-full">
-                            <Outlet />
-                        </div>
-                    </div>
-
-                </div>
-
-            </main>
-
+      <div className="h-screen w-full bg-background flex items-center justify-center">
+        <div className="text-label-caps font-label-caps text-on-surface-variant">
+          Initialisation hors ligne...
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="flex h-screen bg-background overflow-hidden font-sans text-base">
+      {/* ── OVERLAY mobile ── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-30 md:hidden backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── SIDEBAR ── */}
+      <aside
+        className={`
+          fixed md:static inset-y-0 left-0 z-50 
+          w-sidebar bg-surface dark:bg-surface-dim 
+          flex flex-col h-full py-unit z-20
+          transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+          border-r border-outline-variant dark:border-outline
+        `}
+        aria-label="Navigation principale"
+      >
+        {/* Brand */}
+        <div className="px-6 py-6 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
+              <img src={logo} alt="StudyFlow" className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-headline-md font-headline-md tracking-tight text-primary dark:text-primary-fixed-dim">StudyFlow</h1>
+              <p className="text-label-sm font-label-sm text-on-surface-variant mt-1">Academic Excellence</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Navigation */}
+        <nav className="flex-1 flex flex-col gap-1 px-2" aria-label="Navigation principale">
+          {navItems.map((item) => {
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive: active }) => `
+                  flex items-center gap-3 px-4 py-2 text-label-sm font-label-sm rounded-lg
+                  transition-all hover:scale-98 duration-200
+                  ${active
+                    ? 'bg-surface-container dark:bg-surface-container-high text-primary dark:text-primary-fixed-dim border-l-2 border-primary font-semibold'
+                    : 'text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container'
+                  }
+                `}
+                aria-current={active ? 'page' : undefined}
+              >
+                <span className="material-symbols-outlined text-[20px]" data-icon={item.icon} style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>
+                  {item.icon}
+                </span>
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Navigation */}
+        <div className="mt-auto px-2 pb-4 flex flex-col gap-1 border-t border-outline-variant pt-4 mx-2">
+          {bottomNavItems.map((item) => {
+            if (item.isLogout) {
+              return (
+                <button
+                  key={item.label}
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all hover:scale-98 duration-200 rounded-lg w-full text-left"
+                >
+                  <span className="material-symbols-outlined text-[20px]" data-icon={item.icon}>
+                    {item.icon}
+                  </span>
+                  <span className="text-label-sm font-label-sm">{item.label}</span>
+                </button>
+              );
+            }
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive: isActive }) => `
+                  flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all hover:scale-98 duration-200 rounded-lg
+                  ${isActive ? 'bg-surface-container-high text-primary dark:text-primary-fixed-dim font-semibold' : ''}
+                `}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <span className="material-symbols-outlined text-[20px]" data-icon={item.icon}>
+                  {item.icon}
+                </span>
+                <span className="text-label-sm font-label-sm">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT WRAPPER ── */}
+      <div className="flex-1 flex flex-col md:ml-sidebar-width min-h-0 relative">
+        {/* TopNavBar */}
+        <header className="bg-surface-container-lowest border-b border-outline-variant dark:border-outline flex justify-between items-center px-container-padding h-16 shrink-0 z-10 sticky top-0">
+          <div className="flex items-center gap-4">
+            <button
+              className="md:hidden mr-4 text-on-surface-variant p-2 rounded-full hover:bg-surface-container-low"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Ouvrir le menu"
+              aria-expanded={sidebarOpen}
+            >
+              <span className="material-symbols-outlined" data-icon="menu">menu</span>
+            </button>
+            <h2 className="text-headline-sm font-headline-sm text-on-surface hidden md:block">{getPageTitle(activePath)}</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              className="text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-primary-fixed-dim transition-colors p-2 rounded-full hover:bg-surface-container-low"
+              aria-label="Notifications"
+            >
+              <span className="material-symbols-outlined" data-icon="notifications">notifications</span>
+            </button>
+            <div className="w-8 h-8 rounded-full bg-surface-container border border-outline-variant overflow-hidden flex items-center justify-center">
+              <img
+                alt="User Profile"
+                className="object-cover w-full h-full"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjPgzRluqsnXngceN6sTBSyymxvKejnhWpH49qeMWUOsjF1BD21aFPaAPRDbwTJcADK6v3lWcbvRxhP3AiC_1cvwagDRwyu8MSxoq99FOe3-aYxm-lYRonMG6_bPJp1msaFViKq_ABthhFCJy_L8XkyWgibkmtnFiBnI38vMrmOXSJmu9ZO80J8FhtorXSWNdvJ1fbyD8b3zuE4NmJd9Zlp69IEV9PxkSTYS7brmrvSmT0I8S36_HCag"
+              />
+            </div>
+          </div>
+        </header>
+
+        {/* Main Canvas */}
+        <main className="flex-1 overflow-y-auto p-container-padding bg-background">
+          <div className="max-w-[1200px] mx-auto w-full">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function getPageTitle(path: string): string {
+  const titles: Record<string, string> = {
+    '/dashboard': 'Tableau de bord',
+    '/courses': 'Mes cours',
+    '/agenda': 'Planning',
+    '/tasks': 'Tâches',
+    '/works': 'Travaux',
+    '/risk': 'Analyse de risque',
+    '/profile': 'Profil',
+    '/settings': 'Paramètres',
+  };
+  return titles[path] || 'StudyFlow';
 }

@@ -1,641 +1,354 @@
 import { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
+import { Bell, Trash2, User, Settings, BarChart3, Smartphone, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useVisualComfort, type VisualComfortMode } from '../../hooks/useVisualComfort';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { apiClient } from '../../api/client';
 
-// ─── Hook install PWA ──────────────────────────────────────
-
 const usePwaInstall = () => {
-    const [prompt, setPrompt] = useState<Event & { prompt?: () => void } | null>(null);
-    const [installed, setInstalled] = useState(false);
+  const [prompt, setPrompt] = useState<Event & { prompt?: () => void } | null>(null);
+  const [installed, setInstalled] = useState(false);
 
-    useEffect(() => {
-        const handler = (e: Event) => {
-            e.preventDefault();
-            setPrompt(e as Event & { prompt?: () => void });
-        };
-        window.addEventListener('beforeinstallprompt', handler);
-        return () => window.removeEventListener('beforeinstallprompt', handler);
-    }, []);
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setPrompt(e as Event & { prompt?: () => void }); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
-    const install = async () => {
-        if (!prompt?.prompt) return;
-        prompt.prompt();
-        setInstalled(true);
-        setPrompt(null);
-    };
-
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-    return { canInstall: !!prompt, install, installed, isIos };
+  const install = async () => { if (!prompt?.prompt) return; prompt.prompt(); setInstalled(true); setPrompt(null); };
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  return { canInstall: !!prompt, install, installed, isIos };
 };
-
-// ─── Section : Informations personnelles ──────────────────
 
 const PersonalInfoSection = () => {
-    const { user, updateUser } = useAuthStore();
-    const [form, setForm] = useState({
-        name: user?.name ?? '',
-        email: user?.email ?? '',
-        language: user?.language ?? 'fr',
-        timezone: 'UTC+2'
-    });
-    const [success, setSuccess] = useState(false);
-    const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+  const { user, updateUser } = useAuthStore();
+  const [form, setForm] = useState({ name: user?.name ?? '', email: user?.email ?? '', language: user?.language ?? 'fr', timezone: 'Europe/Paris' });
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setSuccess(false);
-        setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setSuccess(false); setIsLoading(true);
+    try {
+      const { data } = await apiClient.put('/updateprofile', form);
+      updateUser(data.data); setSuccess(true); setTimeout(() => setSuccess(false), 3000);
+    } catch (err) { if (isAxiosError(err)) setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.'); }
+    finally { setIsLoading(false); }
+  };
 
-        try {
-            const { data } = await apiClient.put('/updateprofile', form);
-            updateUser(data.data);
-            setSuccess(true);
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (err) {
-            if (isAxiosError(err)) {
-                setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.');
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  return (
+    <section className="card card-padded">
+      <div className="flex items-center gap-3 mb-6">
+        <User className="text-primary text-[20px]" />
+        <div className="text-label-caps font-label-caps text-on-surface-variant">Informations personnelles</div>
+      </div>
 
-    return (
-        <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
-            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-6">
-                Informations personnelles
-            </div>
-
-            {/* Avatar section */}
-            <div className="flex items-center gap-5 mb-8">
-                <div className="w-[64px] h-[64px] rounded-full border border-[#E5E5E5] bg-white flex items-center justify-center text-[24px] font-bold text-[#1A1A1A] shrink-0">
-                    {user?.name?.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                    <div className="text-[15px] font-bold text-[#1A1A1A]">{user?.name}</div>
-                    <div className="text-[13px] font-medium text-[#737373] mb-1">{user?.email}</div>
-                    <button type="button" className="border border-[#E5E5E5] rounded-[8px] bg-transparent px-3 py-1 text-[11px] font-bold text-[#1A1A1A] hover:bg-white transition-colors mt-0.5">
-                        Changer la photo
-                    </button>
-                </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                <div className="flex flex-col md:flex-row gap-5">
-                    <div className="flex-1">
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                            Nom complet
-                        </label>
-                        <input
-                            value={form.name}
-                            onChange={(e) => setForm({ ...form, name: e.target.value })}
-                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none bg-white focus:border-[#A3A3A3] transition-colors shadow-sm"
-                        />
-                    </div>
-
-                    <div className="flex-1">
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none bg-white focus:border-[#A3A3A3] transition-colors shadow-sm"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-5">
-                    <div className="flex-1 relative">
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                            Langue
-                        </label>
-                        <select 
-                            value={form.language}
-                            onChange={(e) => setForm({ ...form, language: e.target.value })}
-                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none bg-white appearance-none cursor-pointer focus:border-[#A3A3A3] transition-colors shadow-sm"
-                        >
-                            <option value="fr">Français</option>
-                            <option value="en">Anglais</option>
-                        </select>
-                        <div className="absolute right-4 top-[38px] pointer-events-none text-[#737373]">
-                            <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 relative">
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                            Fuseau horaire
-                        </label>
-                        <select 
-                            value={form.timezone}
-                            onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[14px] font-medium text-[#1A1A1A] outline-none bg-white appearance-none cursor-pointer focus:border-[#A3A3A3] transition-colors shadow-sm"
-                        >
-                            <option value="Europe/Paris">Europe/Paris (UTC+1)</option>
-                            <option value="UTC">UTC</option>
-                            <option value="America/New_York">America/New_York (EST)</option>
-                        </select>
-                        <div className="absolute right-4 top-[38px] pointer-events-none text-[#737373]">
-                            <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                {error && <div className="text-[12px] font-bold text-[#EF4444] mt-1">{error}</div>}
-                {success && <div className="text-[12px] font-bold text-[#10B981] mt-1">Profil mis à jour avec succès.</div>}
-
-                <div className="flex justify-end mt-2">
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="h-10 px-5 rounded-xl border border-[#E5E5E5] text-[14px] font-bold text-[#1A1A1A] bg-transparent hover:bg-white transition-colors flex items-center justify-center min-w-[120px]"
-                    >
-                        {isLoading ? <span className="w-4 h-4 border-2 border-[#1A1A1A] border-t-transparent rounded-full animate-spin" /> : 'Enregistrer'}
-                    </button>
-                </div>
-            </form>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex items-center gap-5 p-4 bg-surface-container rounded-lg">
+          <div className="w-16 h-16 rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-2xl font-bold text-on-surface shrink-0">
+            {user?.name?.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1">
+            <div className="text-body-lg font-body-lg font-medium text-on-surface">{user?.name}</div>
+            <div className="text-body-md font-body-md text-on-surface-variant mt-1">{user?.email}</div>
+          </div>
         </div>
-    );
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Nom complet</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input input-bordered w-full h-12 text-base" />
+          </div>
+          <div>
+            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Email</label>
+            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input input-bordered w-full h-12 text-base" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Langue</label>
+            <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} className="input input-bordered w-full h-12 text-base">
+              <option value="fr">Français</option>
+              <option value="en">Anglais</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Fuseau horaire</label>
+            <select value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} className="input input-bordered w-full h-12 text-base">
+              <option value="Europe/Paris">Europe/Paris (UTC+1)</option>
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">America/New_York (EST)</option>
+            </select>
+          </div>
+        </div>
+
+        {error && <div className="text-label-sm font-label-sm text-error">{error}</div>}
+        {success && <div className="text-label-sm font-label-sm text-primary">Profil mis à jour avec succès.</div>}
+
+        <div className="flex justify-end">
+          <button type="submit" disabled={isLoading} className="btn btn-primary min-w-[140px]">
+            {isLoading ? <span className="loading loading-spinner loading-sm" /> : 'Enregistrer'}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
 };
 
-// ─── Section : Sécurité ────────────────────────────────────
-
 const visualComfortOptions: Array<{ value: VisualComfortMode; title: string; description: string; scale: string }> = [
-    {
-        value: 'standard',
-        title: 'Standard',
-        description: 'Taille actuelle',
-        scale: '100%',
-    },
-    {
-        value: 'comfortable',
-        title: 'Confort',
-        description: 'Texte plus lisible',
-        scale: '108%',
-    },
-    {
-        value: 'high',
-        title: 'Confort+',
-        description: 'Maximum lisibilite',
-        scale: '116%',
-    },
+  { value: 'standard', title: 'Standard', description: 'Taille actuelle', scale: '100%' },
+  { value: 'comfortable', title: 'Confort', description: 'Texte plus lisible', scale: '108%' },
+  { value: 'high', title: 'Confort+', description: 'Maximum lisibilité', scale: '116%' },
 ];
 
 const VisualComfortSection = () => {
-    const { mode, setMode } = useVisualComfort();
-
-    return (
-        <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
-            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2">
-                Accessibilite visuelle
-            </div>
-            <p className="text-[13px] font-medium text-[#737373] mb-4">
-                Ajuste la taille globale des petits textes pour un meilleur confort de lecture.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {visualComfortOptions.map((option) => {
-                    const selected = mode === option.value;
-                    return (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setMode(option.value)}
-                            aria-pressed={selected}
-                            className={`
-                                text-left rounded-xl border p-4 transition-colors
-                                ${selected
-                                    ? 'border-[#1A1A1A] bg-white shadow-sm'
-                                    : 'border-[#E5E5E5] bg-white/60 hover:bg-white'}
-                            `}
-                        >
-                            <div className="text-[14px] font-bold text-[#1A1A1A]">{option.title}</div>
-                            <div className="text-[13px] font-medium text-[#737373] mt-1">{option.description}</div>
-                            <div className={`mt-2 inline-flex px-2 py-1 rounded-[6px] text-[12px] font-bold ${selected ? 'bg-[#1A1A1A] text-white' : 'bg-[#F3F4F6] text-[#525252]'}`}>
-                                {option.scale}
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
+  const { mode, setMode } = useVisualComfort();
+  return (
+    <section className="card card-padded">
+      <div className="flex items-center gap-3 mb-4">
+        <Settings className="text-primary text-[20px]" />
+        <div className="text-label-caps font-label-caps text-on-surface-variant">Accessibilité visuelle</div>
+      </div>
+      <p className="text-body-md font-body-md text-on-surface-variant mb-4">Ajuste la taille globale des textes pour un meilleur confort de lecture.</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {visualComfortOptions.map((option) => {
+          const selected = mode === option.value;
+          return (
+            <button key={option.value} type="button" onClick={() => setMode(option.value)} aria-pressed={selected}
+              className={`text-left card card-padded transition-colors ${selected ? 'ring-2 ring-primary' : 'hover:border-primary'}`}
+            >
+              <div className="text-body-md font-body-md font-medium text-on-surface">{option.title}</div>
+              <div className="text-label-sm font-label-sm text-on-surface-variant mt-1">{option.description}</div>
+              <div className={`mt-2 inline-flex px-2 py-1 rounded text-label-caps font-label-caps ${selected ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
+                {option.scale}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
 };
 
 const SecuritySection = () => {
-    const [form, setForm] = useState({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-    });
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setSuccess(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setSuccess(false);
+    if (form.newPassword !== form.confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return; }
+    if (form.newPassword.length < 8) { setError('Le mot de passe doit contenir au moins 8 caractères.'); return; }
+    setIsLoading(true);
+    try {
+      await apiClient.put('/updateprofile', { currentPassword: form.currentPassword, newPassword: form.newPassword });
+      setSuccess(true); setForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setTimeout(() => setSuccess(false), 3000);
+    } catch (err) { if (isAxiosError(err)) setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.'); }
+    finally { setIsLoading(false); }
+  };
 
-        if (form.newPassword !== form.confirmPassword) {
-            setError('Les mots de passe ne correspondent pas.');
-            return;
-        }
-        if (form.newPassword.length < 8) {
-            setError('Le mot de passe doit contenir au moins 8 caractères.');
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            await apiClient.put('/updateprofile', {
-                currentPassword: form.currentPassword,
-                newPassword: form.newPassword,
-            });
-            setSuccess(true);
-            setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (err) {
-            if (isAxiosError(err)) {
-                setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.');
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
-            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-6">
-                Sécurité
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                <div>
-                    <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                        Mot de passe actuel
-                    </label>
-                    <input
-                        type="password"
-                        value={form.currentPassword}
-                        onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
-                        placeholder="••••••••"
-                        required
-                        className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[16px] font-mono tracking-[0.2em] text-[#A3A3A3] outline-none bg-white focus:border-[#A3A3A3] focus:text-[#1A1A1A] transition-colors shadow-sm placeholder:tracking-[0.2em] placeholder:text-[#D4D4D4] pt-1"
-                    />
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-5">
-                    <div className="flex-1">
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                            Nouveau mot de passe
-                        </label>
-                        <input
-                            type="password"
-                            value={form.newPassword}
-                            onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-                            placeholder="••••••••"
-                            required
-                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[16px] font-mono tracking-[0.2em] text-[#A3A3A3] outline-none bg-white focus:border-[#A3A3A3] focus:text-[#1A1A1A] transition-colors shadow-sm placeholder:tracking-[0.2em] placeholder:text-[#D4D4D4] pt-1"
-                        />
-                    </div>
-                    <div className="flex-1">
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                            Confirmer
-                        </label>
-                        <input
-                            type="password"
-                            value={form.confirmPassword}
-                            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                            placeholder="••••••••"
-                            required
-                            className="w-full h-11 px-4 rounded-xl border border-[#E5E5E5] text-[16px] font-mono tracking-[0.2em] text-[#A3A3A3] outline-none bg-white focus:border-[#A3A3A3] focus:text-[#1A1A1A] transition-colors shadow-sm placeholder:tracking-[0.2em] placeholder:text-[#D4D4D4] pt-1"
-                        />
-                    </div>
-                </div>
-
-                {error && <div className="text-[12px] font-bold text-[#EF4444] mt-1">{error}</div>}
-                {success && <div className="text-[12px] font-bold text-[#10B981] mt-1">Mot de passe modifié avec succès.</div>}
-
-                <div className="flex justify-end mt-2">
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="h-10 px-5 rounded-xl border border-[#E5E5E5] text-[14px] font-bold text-[#1A1A1A] bg-transparent hover:bg-white transition-colors flex items-center justify-center min-w-[200px]"
-                    >
-                        {isLoading ? <span className="w-4 h-4 border-2 border-[#1A1A1A] border-t-transparent rounded-full animate-spin" /> : 'Changer le mot de passe'}
-                    </button>
-                </div>
-            </form>
+  return (
+    <section className="card card-padded">
+      <div className="flex items-center gap-3 mb-6">
+        <Lock className="text-primary text-[20px]" />
+        <div className="text-label-caps font-label-caps text-on-surface-variant">Sécurité</div>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Mot de passe actuel</label>
+          <div className="relative">
+            <input type={showCurrent ? 'text' : 'password'} value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
+            <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
+              {showCurrent ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
+            </button>
+          </div>
         </div>
-    );
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Nouveau mot de passe</label>
+            <div className="relative">
+              <input type={showNew ? 'text' : 'password'} value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
+                {showNew ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Confirmer</label>
+            <div className="relative">
+              <input type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
+                {showConfirm ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
+              </button>
+            </div>
+          </div>
+        </div>
+        {error && <div className="text-label-sm font-label-sm text-error">{error}</div>}
+        {success && <div className="text-label-sm font-label-sm text-primary">Mot de passe modifié avec succès.</div>}
+        <div className="flex justify-end">
+          <button type="submit" disabled={isLoading} className="btn btn-primary min-w-[200px]">
+            {isLoading ? <span className="loading loading-spinner loading-sm" /> : 'Changer le mot de passe'}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
 };
 
-// ─── Section : Notifications ───────────────────────────────
-
 const NotificationsSection = () => {
-    const {
-        isSupported,
-        permissionStatus,
-        isSubscribed,
-        isLoading,
-        error,
-        preferences,
-        setPreference,
-        enablePush,
-        disablePush,
-        sendTestNotification,
-    } = usePushNotifications();
+  const { isSupported, permissionStatus, isSubscribed, isLoading, error, preferences, setPreference, enablePush, disablePush, sendTestNotification } = usePushNotifications();
 
-    const statusBadge = (() => {
-        if (!isSupported) {
-            return { label: 'Non supporte', className: 'bg-[#F3F4F6] text-[#6B7280]' };
-        }
-        if (permissionStatus === 'denied') {
-            return { label: 'Bloque', className: 'bg-[#FEF2F2] text-[#DC2626]' };
-        }
-        if (permissionStatus === 'granted' && isSubscribed) {
-            return { label: 'Actif', className: 'bg-[#ECFDF5] text-[#047857]' };
-        }
-        return { label: 'Inactif', className: 'bg-[#FEF9C3] text-[#92400E]' };
-    })();
-
-    const items = [
-        {
-            key: 'examReminder' as const,
-            label: 'Rappel avant un examen',
-            sub: '24h et 1h avant',
-        },
-        {
-            key: 'lateTasks' as const,
-            label: 'Taches en retard',
-            sub: 'Notification quotidienne',
-        },
-        {
-            key: 'highRisk' as const,
-            label: 'Cours a risque eleve',
-            sub: 'Quand le score depasse HIGH',
-        },
-        {
-            key: 'weeklySummary' as const,
-            label: 'Resume hebdomadaire',
-            sub: 'Chaque lundi matin',
-        },
-    ];
-
-    return (
-        <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
-            <div className="flex items-center justify-between gap-3 mb-2">
-                <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest">
-                    Notifications push
-                </div>
-                <span className={`px-2.5 py-1 rounded-[6px] text-[12px] font-bold ${statusBadge.className}`}>
-                    {statusBadge.label}
-                </span>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-4">
-                {isSubscribed ? (
-                    <>
-                        <button
-                            type="button"
-                            onClick={() => void sendTestNotification()}
-                            disabled={isLoading}
-                            className="h-9 px-4 rounded-xl border border-[#E5E5E5] text-[13px] font-bold text-[#1A1A1A] bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
-                        >
-                            Tester
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => void disablePush()}
-                            disabled={isLoading}
-                            className="h-9 px-4 rounded-xl border border-[#FECACA] text-[13px] font-bold text-[#DC2626] bg-[#FEF2F2] hover:bg-[#FEE2E2] transition-colors disabled:opacity-50"
-                        >
-                            Desactiver push
-                        </button>
-                    </>
-                ) : (
-                    <button
-                        type="button"
-                        onClick={() => void enablePush()}
-                        disabled={isLoading || !isSupported}
-                        className="h-9 px-4 rounded-xl border border-[#1A1A1A] text-[13px] font-bold text-white bg-[#1A1A1A] hover:opacity-90 transition-opacity disabled:opacity-50"
-                    >
-                        Activer push
-                    </button>
-                )}
-            </div>
-
-            {!isSupported && (
-                <div className="text-[13px] font-medium text-[#737373] mb-3">
-                    Ce navigateur ne supporte pas les notifications push.
-                </div>
-            )}
-            {permissionStatus === 'denied' && (
-                <div className="text-[13px] font-medium text-[#B45309] mb-3">
-                    Permission bloquee. Autorise les notifications dans les parametres du navigateur.
-                </div>
-            )}
-            {error && (
-                <div className="text-[13px] font-bold text-[#DC2626] mb-3">
-                    {error}
-                </div>
-            )}
-
-            <div className="text-[12px] font-medium text-[#737373] mb-2">
-                Preferences de notification
-            </div>
-
-            <div className="flex flex-col">
-                {items.map((item, i) => (
-                    <div
-                        key={item.key}
-                        className={`flex justify-between items-center py-4 ${i < items.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}
-                    >
-                        <div>
-                            <div className="text-[14px] font-bold text-[#1A1A1A]">{item.label}</div>
-                            <div className="text-[12px] font-medium text-[#737373] mt-0.5">{item.sub}</div>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="sr-only peer"
-                                checked={preferences[item.key]}
-                                onChange={() => setPreference(item.key, !preferences[item.key])}
-                            />
-                            <div className="w-[44px] h-[24px] bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
-                        </label>
-                    </div>
-                ))}
-            </div>
+  return (
+    <section className="card card-padded">
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Bell className="text-primary text-[20px]" />
+          <div className="text-label-caps font-label-caps text-on-surface-variant">Notifications push</div>
         </div>
-    );
+        <span className={`px-2.5 py-1 rounded text-label-caps font-label-caps bg-surface-container-highest text-on-surface-variant`}>
+          {(() => { if (!isSupported) return 'Non supporté'; if (permissionStatus === 'denied') return 'Bloqué'; if (permissionStatus === 'granted' && isSubscribed) return 'Actif'; return 'Inactif'; })()}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {isSubscribed ? (
+          <> <button type="button" onClick={() => void sendTestNotification()} disabled={isLoading} className="btn btn-outlined">Tester</button>
+            <button type="button" onClick={() => void disablePush()} disabled={isLoading} className="btn btn-error">Désactiver push</button>
+          </>
+        ) : (
+          <button type="button" onClick={() => void enablePush()} disabled={isLoading || !isSupported} className="btn btn-primary">Activer push</button>
+        )}
+      </div>
+
+      {!isSupported && <div className="text-label-sm font-label-sm text-on-surface-variant mb-3">Ce navigateur ne supporte pas les notifications push.</div>}
+      {permissionStatus === 'denied' && <div className="text-label-sm font-label-sm text-tertiary mb-3">Permission bloquée. Autorise dans les paramètres du navigateur.</div>}
+      {error && <div className="text-label-sm font-label-sm text-error mb-3">{error}</div>}
+
+      <div className="text-label-caps font-label-caps text-on-surface-variant mb-2">Préférences de notification</div>
+      <div className="space-y-0 divide-y divide-outline-variant">
+        {[
+          { key: 'examReminder', label: 'Rappel avant un examen', sub: '24h et 1h avant' },
+          { key: 'lateTasks', label: 'Tâches en retard', sub: 'Notification quotidienne' },
+          { key: 'highRisk', label: 'Cours à risque élevé', sub: 'Quand le score dépasse HIGH' },
+          { key: 'weeklySummary', label: 'Résumé hebdomadaire', sub: 'Chaque lundi matin' },
+        ].map((item) => (
+          <div key={item.key} className="flex justify-between items-center py-4">
+            <div>
+              <div className="text-body-md font-body-md font-medium text-on-surface">{item.label}</div>
+              <div className="text-label-sm font-label-sm text-on-surface-variant mt-0.5">{item.sub}</div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" checked={preferences[item.key]} onChange={() => setPreference(item.key, !preferences[item.key])} />
+              <div className="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-outline-variant after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:border-transparent" />
+            </label>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 };
 
 const StatsSection = () => {
-    const { user } = useAuthStore();
-
-    const stats = [
-        { label: 'Tâches complétées', value: '47' },
-        { label: 'Sessions Pomodoro', value: '23' },
-        { label: 'Cours suivis', value: '6' },
-        {
-            label: 'Membre depuis', value: user?.createdAt
-                ? new Date(user.createdAt).toLocaleDateString('fr-FR', {
-                    month: 'short', year: 'numeric',
-                }).replace('.', '')
-                : '—'
-        },
-        { label: 'Dernière synchronisation', value: 'il y a 2 min' },
-    ];
-
-    return (
-        <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
-            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-1">
-                Statistiques du compte
-            </div>
-
-            <div className="flex flex-col">
-                {stats.map((s, i) => (
-                    <div
-                        key={s.label}
-                        className={`flex justify-between items-center py-3.5 ${i < stats.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}
-                    >
-                        <span className="text-[13px] font-bold text-[#737373]">{s.label}</span>
-                        <span className="text-[14px] font-bold text-[#1A1A1A]">{s.value}</span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+  const { user } = useAuthStore();
+  const stats = [
+    { label: 'Tâches complétées', value: '47' },
+    { label: 'Sessions Pomodoro', value: '23' },
+    { label: 'Cours suivis', value: '6' },
+    { label: 'Membre depuis', value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }).replace('.', '') : '—' },
+    { label: 'Dernière synchronisation', value: 'il y a 2 min' },
+  ];
+  return (
+    <section className="card card-padded">
+      <div className="flex items-center gap-3 mb-4">
+        <BarChart3 className="text-primary text-[20px]" />
+        <div className="text-label-caps font-label-caps text-on-surface-variant">Statistiques du compte</div>
+      </div>
+      <div className="divide-y divide-outline-variant">
+        {stats.map((s) => (
+          <div key={s.label} className="flex justify-between items-center py-4">
+            <span className="text-label-sm font-label-sm text-on-surface-variant">{s.label}</span>
+            <span className="text-body-md font-body-md font-medium text-on-surface">{s.value}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 };
-
-// ─── Section : PWA Install ─────────────────────────────────
 
 const PwaSection = () => {
-    const { canInstall, install, installed, isIos } = usePwaInstall();
-
-    return (
-        <div className="bg-[#FAF9F6] rounded-[16px] border border-[#E5E5E5] p-6">
-            <div className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-5">
-                Application
-            </div>
-
-            <div className="flex items-center gap-4">
-                <div className="w-[50px] h-[50px] rounded-[12px] bg-[#1A1A1A] flex items-center justify-center text-white text-[16px] font-bold shrink-0 tracking-tighter">
-                    SF
-                </div>
-                <div className="flex-1">
-                    <div className="text-[14px] font-bold text-[#1A1A1A] mb-0.5">
-                        Installer l'application
-                    </div>
-                    <div className="text-[12px] font-medium text-[#737373]">
-                        Accédez à l'app depuis ton bureau ou écran d'accueil
-                    </div>
-                </div>
-                {installed ? (
-                    <span className="bg-[#E5E5E5] text-[#1A1A1A] px-2 py-1 rounded-[6px] text-[11px] font-bold border border-[#D4D4D4]">Installée</span>
-                ) : isIos ? (
-                    <span className="text-[11px] font-bold text-[#737373] max-w-[120px] text-right leading-tight">
-                        Appuie sur Partager → "Sur l'écran d'accueil"
-                    </span>
-                ) : canInstall ? (
-                    <button onClick={install} className="h-9 px-4 rounded-xl border border-[#E5E5E5] text-[13px] font-bold text-[#1A1A1A] bg-white hover:bg-gray-50 transition-colors shrink-0">
-                        Installer
-                    </button>
-                ) : (
-                    <span className="text-[12px] font-bold text-[#A3A3A3]">Déjà installée</span>
-                )}
-            </div>
+  const { canInstall, install, installed, isIos } = usePwaInstall();
+  return (
+    <section className="card card-padded">
+      <div className="flex items-center gap-3 mb-4">
+        <Smartphone className="text-primary text-[20px]" />
+        <div className="text-label-caps font-label-caps text-on-surface-variant">Application</div>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-on-primary text-xl font-bold shrink-0">SF</div>
+        <div className="flex-1">
+          <div className="text-body-md font-body-md font-medium text-on-surface mb-1">Installer l'application</div>
+          <div className="text-label-sm font-label-sm text-on-surface-variant">Accédez à l'app depuis ton bureau ou écran d'accueil</div>
         </div>
-    );
+        {installed ? (
+          <span className="btn btn-outlined px-3 py-1 text-label-sm">Installée</span>
+        ) : isIos ? (
+          <span className="text-label-sm font-label-sm text-on-surface-variant max-w-xs text-right leading-tight">Appuie sur Partager → "Sur l'écran d'accueil"</span>
+        ) : canInstall ? (
+          <button onClick={install} className="btn btn-outlined shrink-0">Installer</button>
+        ) : (
+          <span className="text-label-sm font-label-sm text-on-surface-variant">Déjà installée</span>
+        )}
+      </div>
+    </section>
+  );
 };
-
-// ─── Section : Danger zone ─────────────────────────────────
 
 const DangerZone = () => {
-    const [confirm, setConfirm] = useState(false);
-
-    return (
-        <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-[16px] p-6 mb-8 relative">
-            <div className="text-[11px] font-bold text-[#EF4444] uppercase tracking-widest mb-6">
-                Zone dangereuse
-            </div>
-
-            <div className="flex justify-between items-center">
-                <div>
-                    <div className="text-[14px] font-bold text-[#EF4444]">
-                        Supprimer mon compte
-                    </div>
-                    <div className="text-[12px] font-medium text-[#EF4444]/80 mt-1">
-                        Toutes les données seront supprimées définitivement
-                    </div>
-                </div>
-                {confirm ? (
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setConfirm(false)}
-                            className="h-10 px-4 rounded-xl text-[13px] font-bold text-[#1A1A1A] bg-transparent hover:bg-[#F3F4F6] transition-colors"
-                        >
-                            Annuler
-                        </button>
-                        <button className="h-10 px-4 rounded-xl border border-[#FECACA] text-[13px] font-bold text-[#EF4444] bg-[#FEE2E2] hover:bg-[#FECACA] transition-colors shadow-sm">
-                            Confirmer
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={() => setConfirm(true)}
-                        className="h-10 px-5 rounded-xl border border-[#FECACA] text-[14px] font-bold text-[#EF4444] bg-transparent hover:bg-[#FEE2E2] transition-colors"
-                    >
-                        Supprimer
-                    </button>
-                )}
-            </div>
-
-            {/* Simulated scroll arrow icon from design snippet positioned at center bottom layout roughly */}
-            <div className="absolute -bottom-[22px] left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border border-[#E5E5E5] bg-white flex items-center justify-center text-[#737373] shadow-sm">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 4V20M12 20L5 13M12 20L19 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-            </div>
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <section className="card card-padded border-error/20 bg-error/5 relative">
+      <div className="flex items-center gap-3 mb-4">
+        <Trash2 className="text-error text-[20px]" />
+        <div className="text-label-caps font-label-caps text-error">Zone dangereuse</div>
+      </div>
+      <div className="flex justify-between items-center">
+        <div>
+          <div className="text-body-md font-body-md font-medium text-error">Supprimer mon compte</div>
+          <div className="text-label-sm font-label-sm text-error/80 mt-1">Toutes les données seront supprimées définitivement</div>
         </div>
-    );
+        {confirm ? (
+          <div className="flex gap-2">
+            <button onClick={() => setConfirm(false)} className="btn btn-outlined">Annuler</button>
+            <button className="btn btn-error">Confirmer</button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirm(true)} className="btn btn-error">Supprimer</button>
+        )}
+      </div>
+    </section>
+  );
 };
 
-// ─── Page principale ───────────────────────────────────────
-
 export default function ProfilePage() {
-    return (
-        <div className="max-w-[700px] mx-auto flex flex-col gap-5 px-2 md:px-0 pt-2 pb-16">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-1">
-                <h1 className="text-[22px] font-bold text-[#1A1A1A] tracking-tight">Mon profil</h1>
-                <button className="text-[24px] font-bold text-[#A3A3A3] hover:text-[#1A1A1A] transition-colors leading-[0.5] pb-2 px-1 tracking-widest cursor-pointer">
-                    ...
-                </button>
-            </div>
-
-            <PersonalInfoSection />
-            <VisualComfortSection />
-            <SecuritySection />
-            <NotificationsSection />
-            <StatsSection />
-            <PwaSection />
-            <DangerZone />
-        </div>
-    );
+  return (
+    <div className="max-w-3xl mx-auto space-y-6 p-2 pt-2 pb-16">
+      <header className="flex justify-between items-center mb-2">
+        <h1 className="text-display-lg font-display-lg text-on-surface">Mon profil</h1>
+        <button className="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface" aria-label="Plus d'options"><span className="material-symbols-outlined text-[24px]">more_vert</span></button>
+      </header>
+      <PersonalInfoSection />
+      <VisualComfortSection />
+      <SecuritySection />
+      <NotificationsSection />
+      <StatsSection />
+      <PwaSection />
+      <DangerZone />
+    </div>
+  );
 }
-
