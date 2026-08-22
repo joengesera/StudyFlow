@@ -1,77 +1,124 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* Thème clair seul : dark: devient inerte (jamais de classe .dark appliquée) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Thème daisyUI aligné sur la DA ChatGPT */
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7f8;
+  --color-base-300: #ececec;
+  --color-base-content: #0d0d0d;
+  --color-primary: #0d0d0d;
+  --color-primary-content: #ffffff;
+  --color-secondary: #575759;
+  --color-secondary-content: #ffffff;
+  --color-accent: #0d0d0d;
+  --color-accent-content: #ffffff;
+  --color-neutral: #2b2b2b;
+  --color-neutral-content: #ffffff;
+  --color-info: #006fd6;
+  --color-info-content: #ffffff;
+  --color-success: #0f7b3a;
+  --color-success-content: #ffffff;
+  --color-warning: #b45309;
+  --color-warning-content: #ffffff;
+  --color-error: #ba1a1a;
+  --color-error-content: #ffffff;
+  --radius-selector: 4px;
+  --radius-field: 5px;
+  --radius-box: 5px;
+}
+
 @theme {
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
 
-  /* Colors - Material 3 / Light theme */
-  --color-primary: #0055c7;
-  --color-primary-container: #256eec;
-  --color-primary-fixed: #d9e2ff;
-  --color-primary-fixed-dim: #b0c6ff;
+  /* Colors - ChatGPT-inspired neutrals / Light theme */
+  --color-primary: #0d0d0d;
   --color-on-primary: #ffffff;
-  --color-on-primary-container: #fefcff;
-  --color-on-primary-fixed: #001945;
-  --color-on-primary-fixed-variant: #00419c;
+  --color-primary-container: #f0f0f1;
+  --color-on-primary-container: #424242;
 
-  --color-secondary: #5e5e5e;
-  --color-secondary-container: #e3e2e2;
-  --color-secondary-fixed: #e3e2e2;
-  --color-secondary-fixed-dim: #c7c6c6;
+  --color-secondary: #575759;
+  --color-secondary-container: #efefef;
   --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #646464;
-  --color-on-secondary-fixed: #1b1c1c;
-  --color-on-secondary-fixed-variant: #464747;
+  --color-on-secondary-container: #424242;
 
   --color-tertiary: #984300;
   --color-tertiary-container: #be5600;
-  --color-tertiary-fixed: #ffdbca;
-  --color-tertiary-fixed-dim: #ffb68e;
   --color-on-tertiary: #ffffff;
   --color-on-tertiary-container: #fffbff;
-  --color-on-tertiary-fixed: #331200;
-  --color-on-tertiary-fixed-variant: #763300;
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
   --color-on-error: #ffffff;
   --color-on-error-container: #93000a;
 
-  --color-surface: #faf8ff;
-  --color-surface-dim: #d8d9e4;
-  --color-surface-bright: #faf8ff;
+  /* Statuts de tâche - fonction des colonnes kanban */
+  --color-status-todo: #ea7317;
+  --color-status-progress: #2f6fed;
+  --color-status-done: #1f9d55;
+
+  --color-surface: #ffffff;
+  --color-surface-dim: #e8e8e8;
+  --color-surface-bright: #ffffff;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f2f3fe;
-  --color-surface-container: #ecedf8;
-  --color-surface-container-high: #e7e7f2;
-  --color-surface-container-highest: #e1e2ed;
-  --color-on-surface: #191b23;
-  --color-on-surface-variant: #424654;
+  --color-surface-container-low: #f9f9f9;
+  --color-surface-container: #f4f4f4;
+  --color-surface-container-high: #ececec;
+  --color-surface-container-highest: #e3e3e3;
+  --color-background: #ffffff;
+  --color-on-background: #0d0d0d;
+  --color-outline: #c6c6c6;
+  --color-outline-variant: #ececec;
+  --color-on-surface: #0d0d0d;
+  --color-on-surface-variant: #5d5d5d;
 
-  --color-background: #faf8ff;
-  --color-on-background: #191b23;
+  --color-surface-tint: #0d0d0d;
+  --color-inverse-surface: #1a1a1a;
+  --color-inverse-on-surface: #f7f7f8;
+  --color-inverse-primary: #ececec;
 
-  --color-outline: #727786;
-  --color-outline-variant: #c2c6d7;
+  /* Jetons fixed conservés pour compat dark: (inertes, thème clair seul) */
+  --color-primary-fixed: #e3e3e3;
+  --color-primary-fixed-dim: #b4b4b4;
+  --color-on-primary-fixed: #0d0d0d;
+  --color-on-primary-fixed-variant: #424242;
+  --color-secondary-fixed: #efefef;
+  --color-secondary-fixed-dim: #d4d4d4;
+  --color-on-secondary-fixed: #1a1a1a;
+  --color-on-secondary-fixed-variant: #444444;
 
-  --color-surface-tint: #0058cc;
-  --color-inverse-surface: #2e3038;
-  --color-inverse-on-surface: #eff0fb;
-  --color-inverse-primary: #b0c6ff;
+  /* Border Radius - plafond global 5px */
+  --radius-default: 4px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 5px;
+  --radius-xl: 5px;
+  --radius-2xl: 5px;
+  --radius-3xl: 5px;
+  --radius-full: 5px;
 
-  /* Border Radius */
-  --radius-default: 0.125rem;
-  --radius-lg: 0.25rem;
-  --radius-xl: 0.5rem;
-  --radius-full: 0.75rem;
+  /* Spacing - échelle 4px, namespaces Tailwind v4 */
+  --spacing-unit: 4px;
+  --spacing-gutter: 16px;
+  --spacing-card-padding: 20px;
+  --spacing-container-padding: 32px;
+  --spacing-sidebar-width: 240px;
+  --spacing-sidebar-compact: 72px;
+  --width-sidebar: 240px;
 
-  /* Spacing */
-  --space-unit: 4px;
-  --sidebar-width: 240px;
-  --sidebar-compact: 72px;
-  --container-padding: 32px;
-  --gutter: 16px;
-  --card-padding: 20px;
+  /* Alias sémantiques (CSS custom) */
+  --space-unit: var(--spacing-unit);
+  --gutter: var(--spacing-gutter);
+  --card-padding: var(--spacing-card-padding);
+  --container-padding: var(--spacing-container-padding);
+  --sidebar-width: var(--width-sidebar);
+  --sidebar-compact: var(--spacing-sidebar-compact);
 
   /* Typography */
   --text-label-caps: 12px;
@@ -125,6 +172,7 @@
 
   html {
     font-size: 16px;
+    color-scheme: light;
   }
 
   body {
@@ -158,7 +206,8 @@
   .card {
     border: 1px solid var(--color-outline-variant);
     background: var(--color-surface-container-lowest);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
   }
 
   .card-padded {
@@ -274,5 +323,43 @@
   .kanban-scroll::-webkit-scrollbar-thumb {
     background: var(--color-outline-variant);
     border-radius: 4px;
+  }
+}
+@layer components {
+  /* Boutons - arrondi plafonné */
+  .btn {
+    border-radius: 5px;
+    font-weight: 500;
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  .btn-primary:hover {
+    background-color: #2f2f2f;
+  }
+
+  /* Variantes custom utilisees dans l'app */
+  .btn-outlined {
+    background-color: var(--color-surface-container-lowest);
+    border: 1px solid var(--color-outline-variant);
+    color: var(--color-on-surface);
+  }
+
+  .btn-outlined:hover {
+    background-color: var(--color-surface-container);
+    border-color: var(--color-outline);
+  }
+
+  .btn-text {
+    background-color: transparent;
+    border: none;
+    color: inherit;
+  }
+
+  .btn-text:hover {
+    background-color: var(--color-surface-container);
   }
 }

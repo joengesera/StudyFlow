@@ -11,9 +11,9 @@ interface TaskCardProps {
 }
 
 const statusColors = {
-  PENDING: 'var(--color-on-surface-variant)',
-  IN_PROGRESS: 'var(--color-tertiary)',
-  COMPLETED: 'var(--color-primary)',
+  PENDING: 'var(--color-status-todo)',
+  IN_PROGRESS: 'var(--color-status-progress)',
+  COMPLETED: 'var(--color-status-done)',
   CANCELED: 'var(--color-outline)',
 };
 
@@ -59,8 +59,8 @@ export const TaskCard = ({ task, courseName, onSelect, isSelected }: TaskCardPro
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
           {isCompleted ? (
-            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-on-primary text-[18px]">check</span>
+            <div className="w-5 h-5 rounded-full bg-status-done flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-white text-[18px]">check</span>
             </div>
           ) : (
             <div className="w-3 h-3 rounded-full shrink-0" style={{ background: statusDot }} />

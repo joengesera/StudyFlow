@@ -92,21 +92,22 @@ export default function AppLayout() {
         {/* Main Navigation */}
         <nav className="flex-1 flex flex-col gap-1 px-2" aria-label="Navigation principale">
           {navItems.map((item) => {
+            const isActive = currentPath.startsWith(item.to);
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={({ isActive: active }) => `
+                className={`
                   flex items-center gap-3 px-4 py-2 text-label-sm font-label-sm rounded-lg
-                  transition-all hover:scale-98 duration-200
-                  ${active
-                    ? 'bg-surface-container dark:bg-surface-container-high text-primary dark:text-primary-fixed-dim border-l-2 border-primary font-semibold'
+                  transition-all hover:scale-[0.98] duration-200
+                  ${isActive
+                    ? 'bg-surface-container dark:bg-surface-container-high text-primary dark:text-primary-fixed-dim font-semibold'
                     : 'text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container'
                   }
                 `}
-                aria-current={active ? 'page' : undefined}
+                aria-current={isActive ? 'page' : undefined}
               >
-                <span className="material-symbols-outlined text-[20px]" data-icon={item.icon} style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>
+                <span className="material-symbols-outlined text-[20px]" data-icon={item.icon} style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
@@ -123,7 +124,7 @@ export default function AppLayout() {
                 <button
                   key={item.label}
                   onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all hover:scale-98 duration-200 rounded-lg w-full text-left"
+                  className="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all hover:scale-[0.98] duration-200 rounded-lg w-full text-left"
                 >
                   <span className="material-symbols-outlined text-[20px]" data-icon={item.icon}>
                     {item.icon}
@@ -136,11 +137,11 @@ export default function AppLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={({ isActive: isActive }) => `
-                  flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all hover:scale-98 duration-200 rounded-lg
-                  ${isActive ? 'bg-surface-container-high text-primary dark:text-primary-fixed-dim font-semibold' : ''}
+                className={`
+                  flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all hover:scale-[0.98] duration-200 rounded-lg
+                  ${currentPath.startsWith(item.to) ? 'bg-surface-container-high text-primary dark:text-primary-fixed-dim font-semibold' : ''}
                 `}
-                aria-current={isActive ? 'page' : undefined}
+                aria-current={currentPath.startsWith(item.to) ? 'page' : undefined}
               >
                 <span className="material-symbols-outlined text-[20px]" data-icon={item.icon}>
                   {item.icon}
@@ -153,9 +154,9 @@ export default function AppLayout() {
       </aside>
 
       {/* ── MAIN CONTENT WRAPPER ── */}
-      <div className="flex-1 flex flex-col md:ml-sidebar-width min-h-0 relative">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
         {/* TopNavBar */}
-        <header className="bg-surface-container-lowest border-b border-outline-variant dark:border-outline flex justify-between items-center px-container-padding h-16 shrink-0 z-10 sticky top-0">
+        <header className="bg-surface-container-lowest border-b border-outline-variant dark:border-outline flex justify-between items-center px-4 md:px-container-padding h-16 shrink-0 z-10 sticky top-0">
           <div className="flex items-center gap-4">
             <button
               className="md:hidden mr-4 text-on-surface-variant p-2 rounded-full hover:bg-surface-container-low"
@@ -185,7 +186,7 @@ export default function AppLayout() {
         </header>
 
         {/* Main Canvas */}
-        <main className="flex-1 overflow-y-auto p-container-padding bg-background">
+        <main className="flex-1 overflow-y-auto p-4 md:p-container-padding bg-background">
           <div className="max-w-[1200px] mx-auto w-full">
             <Outlet />
           </div>

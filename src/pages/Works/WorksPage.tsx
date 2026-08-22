@@ -41,7 +41,7 @@ export default function WorksPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <WorksHeader stats={stats} onCreate={() => { setSelectedWork(null); setIsCreating(true); }} />
+      <WorksHeader stats={stats} />
       <WorksStatsCards stats={stats} />
       <WorksFilters
         courses={courses}
@@ -50,7 +50,7 @@ export default function WorksPage() {
         onStatusFilterChange={setStatusFilter}
         onCourseFilterToggle={(courseId) => setCourseFilter((current) => (current === courseId ? null : courseId))}
       />
-      <WorksList works={filteredWorks} courses={courses} onSelectWork={setSelectedWork} />
+      <WorksList works={filteredWorks} courses={courses} onSelectWork={setSelectedWork} onCreate={() => { setSelectedWork(null); setIsCreating(true); }} />
       <WorksProgress total={stats.total} graded={stats.graded} />
 
       {(selectedWork || isCreating) && (

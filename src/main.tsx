@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router } from './router';
 import { initializeVisualComfort } from './hooks/useVisualComfort';
+import 'material-symbols/outlined.css';
 import './index.css';
 
 const ReactQueryDevtools = import.meta.env.DEV

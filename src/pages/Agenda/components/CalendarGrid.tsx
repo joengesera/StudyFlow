@@ -21,9 +21,10 @@ export function CalendarGrid({
   onSelectDay,
 }: CalendarGridProps) {
   const days = getMonthDays(currentMonth);
+  const today = new Date();
 
   return (
-    <div className="card overflow-hidden">
+    <div className="border border-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden">
       <div className="p-card-padding">
         <div className="grid grid-cols-7 mb-4">
           {dayNames.map((dayName) => (
@@ -38,29 +39,39 @@ export function CalendarGrid({
             const dayEvents = getEventsForDay(events, day);
             const isSelected = isSameDay(day, selectedDay);
             const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isToday = isSameDay(day, new Date());
+            const isToday = isSameDay(day, today);
 
             return (
               <button
                 key={day.toString()}
                 onClick={() => onSelectDay(day)}
                 className={`min-h-[80px] flex flex-col items-center justify-start p-2 rounded-lg transition-colors ${
-                  !isCurrentMonth ? 'opacity-40' : isSelected ? 'bg-primary/10 border border-primary' : isToday ? 'bg-primary/5' : 'hover:bg-surface-container-low'
+                  !isCurrentMonth
+                    ? 'opacity-40'
+                    : isSelected
+                      ? 'bg-primary/5 border border-primary'
+                      : isToday
+                        ? 'bg-surface-container-low'
+                        : 'hover:bg-surface-container-low'
                 }`}
                 aria-pressed={isSelected}
                 aria-label={format(day, 'EEEE d MMMM', { locale: fr })}
               >
-                <div className={`w-9 h-9 flex items-center justify-center rounded-full text-body-md font-medium mb-1 transition-colors ${
-                  !isCurrentMonth ? 'text-outline' : isSelected ? 'bg-primary text-on-primary' : isToday ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-highest'
+                <div className={`w-9 h-9 flex items-center justify-center text-body-md font-medium mb-1 transition-colors ${
+                  !isCurrentMonth
+                    ? 'text-outline'
+                    : isSelected || isToday
+                      ? 'bg-primary text-on-primary rounded-full'
+                      : 'text-on-background hover:bg-surface-container-highest rounded-full'
                 }`}>
                   {format(day, 'd')}
                 </div>
 
                 <div className="flex gap-1 justify-center flex-wrap w-full">
                   {dayEvents.slice(0, 3).map((event) => (
-                    <div
+                    <span
                       key={event.id}
-                      className="w-1.5 h-1.5 rounded-full"
+                      className="w-1.5 h-1.5"
                       style={{ background: getCourseColor(courses, event.courseId) }}
                     />
                   ))}

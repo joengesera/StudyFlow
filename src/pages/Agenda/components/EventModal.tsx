@@ -129,7 +129,7 @@ export function EventModal({
                   {format(parseISO(event.startDate), 'EEEE d MMMM', { locale: fr })}
                 </div>
                 <div className="text-on-surface-variant">
-                  {format(parseISO(event.startDate), 'HH:mm', { locale: fr })} â€“ {format(parseISO(event.endDate), 'HH:mm', { locale: fr })}
+                  {format(parseISO(event.startDate), 'HH:mm', { locale: fr })} – {format(parseISO(event.endDate), 'HH:mm', { locale: fr })}
                 </div>
               </div>
             </div>
@@ -152,7 +152,7 @@ export function EventModal({
           <button
             type="button"
             onClick={() => {
-              if (confirm('Supprimer cet Ã©vÃ©nement ?')) {
+              if (confirm('Supprimer cet événement ?')) {
                 onDelete(event.id);
                 onClose();
               }
@@ -177,6 +177,7 @@ export function EventModal({
               </button>
             )}
           </div>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
-import { Shield, PartyPopper, BookOpen, Grade, Timer, Brain } from 'lucide-react';
 import { riskApi } from '../../api/risk.api';
 import { useCourses } from '../../hooks/useCourses';
 import { riskKeys } from '../../hooks/useRisks';
@@ -77,9 +76,9 @@ const RiskCard = ({ course, risk, onClick }: { course: Course; risk: RiskAnalysi
 
   const theme = riskStyles[risk.level] ?? riskStyles.LOW;
   const factors = [
-    { label: 'Performance', value: risk.details.performance, icon: Grade },
-    { label: 'Procrastination', value: risk.details.procrastination, icon: Brain },
-    { label: 'Pression examen', value: risk.details.pressure, icon: Timer },
+    { label: 'Performance', value: risk.details.performance },
+    { label: 'Procrastination', value: risk.details.procrastination },
+    { label: 'Pression examen', value: risk.details.pressure },
   ];
 
   return (
@@ -125,7 +124,7 @@ const Tips = ({ courses, risks }: { courses: Course[]; risks: (RiskAnalysis | un
   if (worstRisks.length === 0) {
     return (
       <div className="card card-padded text-center text-on-surface-variant py-10 mt-8">
-        <PartyPopper className="text-4xl mb-2 opacity-40 mx-auto" />
+        <span className="material-symbols-outlined text-4xl mb-2 opacity-40 block mx-auto">celebration</span>
         <h3 className="text-body-md font-body-md font-medium text-on-surface mb-2">Aucun cours à risque</h3>
         <p className="text-body-md font-body-md text-on-surface-variant">Tout va bien ! Continue comme ça.</p>
       </div>
@@ -135,7 +134,7 @@ const Tips = ({ courses, risks }: { courses: Course[]; risks: (RiskAnalysis | un
   return (
     <div className="card card-padded mt-8">
       <div className="flex items-center gap-2 text-label-caps font-label-caps text-on-surface-variant mb-6">
-        <Shield className="text-primary" />
+        <span className="material-symbols-outlined text-primary text-[18px]">shield</span>
         Conseils prioritaires
       </div>
       <div className="space-y-4">
@@ -221,7 +220,7 @@ export default function RiskPage() {
 
       {activeCourses.length === 0 ? (
         <div className="card card-padded text-center py-20 mt-8">
-          <BookOpen className="text-4xl opacity-20 mx-auto mb-4" />
+          <span className="material-symbols-outlined text-5xl opacity-20 mx-auto mb-4 block">menu_book</span>
           <h2 className="text-headline-md font-headline-md text-on-surface mb-2">Aucun cours trouvé</h2>
           <p className="text-body-md font-body-md text-on-surface-variant max-w-md mx-auto mb-6">Ajoute tes cours pour afficher ton niveau de risque en temps réel.</p>
           <button onClick={() => navigate('/courses')} className="btn btn-outlined">Aller aux cours</button>

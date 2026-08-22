@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isAxiosError } from 'axios';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import logo from '@/assets/Fichier1.svg';
 
@@ -65,15 +64,15 @@ export default function LoginPage() {
       : null;
 
   return (
-    <div className="auth-bg-shell min-h-screen bg-base-200 px-3 py-6 sm:px-6 sm:py-10 lg:px-8">
+    <div className="auth-bg-shell relative flex min-h-dvh items-center justify-center bg-base-200 px-3 py-6 sm:px-6 sm:py-10 lg:px-8">
       <div
         aria-hidden="true"
         className="auth-bg-media"
         style={{ backgroundImage: `url(${CLASSROOM_BG_URL})` }}
       />
       <div aria-hidden="true" className="auth-bg-tint" />
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-5xl items-center justify-center sm:min-h-[calc(100vh-5rem)]">
-        <div className="w-full overflow-hidden rounded-2xl bg-base-100/95 shadow-lg backdrop-blur-[2px] md:grid md:grid-cols-[1fr_380px]">
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col">
+        <div className="w-full overflow-hidden rounded-none bg-base-100/95 backdrop-blur-[2px] sm:rounded-2xl md:grid md:grid-cols-[1fr_380px]">
           {/* Left: Form */}
           <div className="flex flex-col justify-center p-5 sm:p-8 md:p-10 lg:p-12">
             <div className="mb-8 md:hidden flex items-center gap-3">
@@ -98,7 +97,7 @@ export default function LoginPage() {
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">mail</span>
                   <input
                     id="email"
                     name="email"
@@ -137,7 +136,7 @@ export default function LoginPage() {
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">lock</span>
                   <input
                     id="password"
                     name="password"
@@ -161,7 +160,7 @@ export default function LoginPage() {
                     aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     aria-pressed={showPassword}
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
                   </button>
                 </div>
                 {passwordError && (
@@ -171,7 +170,7 @@ export default function LoginPage() {
                 )}
                 {backendError && !passwordError && (
                   <p id="backend-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="material-symbols-outlined text-[16px] shrink-0">check_circle</span>
                     {backendError}
                   </p>
                 )}
@@ -191,7 +190,7 @@ export default function LoginPage() {
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     Se connecter
-                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    <span className="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
                   </span>
                 )}
               </button>

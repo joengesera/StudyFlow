@@ -1,6 +1,6 @@
-import { format, startOfWeek } from 'date-fns';
+import { addDays, format, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AgendaViewMode } from '../agendaShared';
+import { weekPlannerDays, type AgendaViewMode } from '../agendaShared';
 
 interface AgendaHeaderProps {
   currentDate: Date;
@@ -27,58 +27,69 @@ export function AgendaHeader({
   onViewModeChange,
   onCreateEvent,
 }: AgendaHeaderProps) {
-  const title =
+  const title = format(currentDate, 'MMMM yyyy', { locale: fr });
+
+  const weekNumber = format(currentDate, 'w', { locale: fr });
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekEnd = addDays(weekStart, weekPlannerDays - 1);
+
+  const subtitle =
     viewMode === 'month'
-      ? format(currentDate, 'MMMM yyyy', { locale: fr })
-      : `Sem. du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: fr })}`;
+      ? `Semaine ${weekNumber}`
+      : `Semaine ${weekNumber} · ${format(weekStart, 'd', { locale: fr })} – ${format(weekEnd, 'd MMM', { locale: fr })}`;
 
   return (
-    <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-      <div className="flex items-center justify-between md:justify-start gap-2 md:gap-4">
-        <button
-          onClick={onPrevious}
-          className="p-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors"
-          aria-label="Période précédente"
-        >
-          <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-        </button>
-        <span className="text-headline-md font-headline-md text-on-surface capitalize min-w-[160px] text-center">
+    <header className="flex flex-col md:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div>
+        <h2 className="text-display-lg-mobile md:text-display-lg font-display-lg text-on-background tracking-tight capitalize">
           {title}
-        </span>
-        <button
-          onClick={onNext}
-          className="p-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors"
-          aria-label="Période suivante"
-        >
-          <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-        </button>
-
-        <button
-          onClick={onToday}
-          className="px-4 h-10 ml-2 rounded-lg border border-outline-variant text-on-surface font-medium text-body-md hover:bg-surface-container-low transition-colors"
-        >
-          Aujourd'hui
-        </button>
+        </h2>
+        <p className="text-body-md font-body-md text-on-surface-variant mt-0.5">{subtitle}</p>
       </div>
 
-      <div className="flex items-center gap-4 w-full md:w-auto">
-        <div className="flex rounded-lg border border-outline-variant overflow-hidden bg-surface-container p-1 gap-1" role="tablist">
+      <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+        <div className="flex items-center rounded-lg border border-outline-variant overflow-hidden bg-surface-container-low p-1 gap-1">
+          <button
+            onClick={onPrevious}
+            className="px-2 py-1.5 rounded-md text-on-surface-variant hover:text-on-background hover:bg-surface-container-highest transition-colors"
+            aria-label="Période précédente"
+          >
+            <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+          </button>
+          <button
+            onClick={onToday}
+            className="px-3 py-1.5 text-label-sm font-label-sm text-on-surface-variant hover:text-on-background hover:bg-surface-container-highest rounded-md transition-colors"
+          >
+            Aujourd'hui
+          </button>
+          <button
+            onClick={onNext}
+            className="px-2 py-1.5 rounded-md text-on-surface-variant hover:text-on-background hover:bg-surface-container-highest transition-colors"
+            aria-label="Période suivante"
+          >
+            <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+          </button>
+        </div>
+
+        <div className="flex items-center bg-surface-container-low rounded-lg p-1 border border-outline-variant" role="tablist">
           {viewOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => onViewModeChange(option.value)}
               role="tab"
               aria-selected={viewMode === option.value}
-              className={`px-4 py-2 rounded-md text-label-sm font-label-sm transition-colors ${viewMode === option.value ? 'bg-surface-container-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}
+              className={`px-4 py-1.5 text-label-sm font-label-sm rounded-md transition-colors ${
+                viewMode === option.value
+                  ? 'bg-surface-container-lowest border border-outline-variant text-on-background font-medium'
+                  : 'text-on-surface-variant hover:text-on-background border border-transparent'
+              }`}
             >
               {option.label}
             </button>
           ))}
         </div>
-        <button
-          onClick={onCreateEvent}
-          className="btn btn-primary whitespace-nowrap"
-        >
+
+        <button onClick={onCreateEvent} className="btn btn-primary whitespace-nowrap">
           <span className="material-symbols-outlined text-[18px]">add</span>
           <span className="hidden md:inline">Nouvel événement</span>
         </button>

@@ -15,6 +15,7 @@ import { useCourses } from '../../hooks/useCourses';
 import type { Event, Task } from '../../types';
 import { KanbanColumn } from './components/KanbanColumn';
 import { PomodoroWidget } from './components/PomodoroWidget';
+import { SmartTaskInput } from './components/SmartTaskInput';
 import { TaskModal } from './components/TaskModal';
 import { columns, type Column } from './taskShared';
 
@@ -32,6 +33,13 @@ export default function TasksPage() {
   const [showModal, setShowModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
   const [now, setNow] = useState(() => Date.now());
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({
+    COMPLETED: true,
+    CANCELED: true,
+  });
+
+  const toggleColumn = (key: Column) =>
+    setCollapsedColumns((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const COMPLETED_VISIBLE_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -108,9 +116,9 @@ export default function TasksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex gap-4 p-8 h-[500px]">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex-1 card animate-pulse" />
+      <div className="flex flex-wrap gap-4 p-8">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="card animate-pulse h-48 w-full md:w-[calc(50%-0.5rem)] xl:w-[calc(25%-0.75rem)]" />
         ))}
       </div>
     );
@@ -136,7 +144,9 @@ export default function TasksPage() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filtres">
+      <SmartTaskInput />
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtres">
         <button onClick={() => setActiveFilter('ALL')} className={`btn ${activeFilter === 'ALL' ? 'btn-primary' : 'btn-outlined'}`}>Toutes</button>
         <button onClick={() => setActiveFilter('URGENT')} className={`btn ${activeFilter === 'URGENT' ? 'btn-primary' : 'btn-outlined'}`}>Urgent</button>
         <button onClick={() => setActiveFilter('TODAY')} className={`btn ${activeFilter === 'TODAY' ? 'btn-primary' : 'btn-outlined'}`}>Aujourd'hui</button>
@@ -148,9 +158,9 @@ export default function TasksPage() {
         ))}
       </div>
 
-      <div className="flex flex-1 min-h-0 gap-6 overflow-x-auto pb-4">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="flex flex-1 min-h-0 gap-4">
+          <div className="flex flex-wrap items-start gap-4 w-full lg:w-auto lg:flex-1 min-w-0">
             {columns.map((col) => (
               <KanbanColumn
                 key={col.key}
@@ -160,6 +170,8 @@ export default function TasksPage() {
                 onSelect={(task) => { setSelectedTask(task); setPomodoroTask(task); setShowModal(true); }}
                 selectedTaskId={selectedTask?.id ?? pomodoroTask?.id ?? null}
                 onAddTask={(status) => createTask({ title: 'Nouvelle tâche', status, priority: 'MEDIUM' })}
+                isCollapsed={!!collapsedColumns[col.key]}
+                onToggle={() => toggleColumn(col.key)}
               />
             ))}
           </div>

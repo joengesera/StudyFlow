@@ -86,7 +86,7 @@ export default function AgendaPage() {
       />
 
       {eventsLoading ? (
-        <div className="card h-[500px] animate-pulse" />
+        <div className="border border-outline-variant bg-surface-container-lowest rounded-xl h-[500px] animate-pulse" />
       ) : viewMode === 'month' ? (
         <>
           <CalendarGrid

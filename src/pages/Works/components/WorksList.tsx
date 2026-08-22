@@ -5,6 +5,7 @@ interface WorksListProps {
   works: Work[];
   courses: Course[];
   onSelectWork: (work: Work) => void;
+  onCreate: () => void;
 }
 
 const WorkRow = ({
@@ -55,12 +56,16 @@ const WorkRow = ({
   );
 };
 
-export const WorksList = ({ works, courses, onSelectWork }: WorksListProps) => {
+export const WorksList = ({ works, courses, onSelectWork, onCreate }: WorksListProps) => {
   if (works.length === 0) {
     return (
       <div className="card card-padded text-center text-on-surface-variant py-10">
         <span className="material-symbols-outlined text-4xl mb-2 block text-outline">assignment</span>
-        <p className="text-body-md font-body-md">Aucun travail trouvé.</p>
+        <p className="text-body-md font-body-md mb-4">Aucun travail trouvé.</p>
+        <button onClick={onCreate} className="btn btn-primary mx-auto">
+          <span className="material-symbols-outlined text-[18px]">add</span>
+          Nouveau travail
+        </button>
       </div>
     );
   }
@@ -84,6 +89,13 @@ export const WorksList = ({ works, courses, onSelectWork }: WorksListProps) => {
           );
         })}
       </div>
+      <button
+        onClick={onCreate}
+        className="w-full py-4 border-t border-dashed border-outline-variant text-label-sm font-label-sm text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors flex items-center justify-center gap-1.5"
+      >
+        <span className="material-symbols-outlined text-[18px]">add</span>
+        Nouveau travail
+      </button>
     </div>
   );
 };

@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { addDays, startOfWeek } from 'date-fns';
-import { useCreateCourse, useUpdateCourse, useDeleteCourse } from '../../hooks/useCourses';
+import { useCreateCourse, useUpdateCourse, useDeleteCourse, useCourses } from '../../hooks/useCourses';
 import { useCreateEvent } from '../../hooks/useEvents';
 import type { Course, EventType } from '../../types';
+import { generateCourseCode, generateRandomCourseColor } from '../../utils/courseMeta';
 
 // ─── Constants ──────────────────────────────────────────────
-const COLORS = [
-    '#3B82F6', '#F59E0B', '#10B981',
-    '#8B5CF6', '#EF4444', '#EC4899', '#14B8A6',
-];
-
 const WEEK_DAYS = [
     { label: 'Lun', value: 1 },
     { label: 'Mar', value: 2 },
@@ -40,13 +36,15 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
     const { mutateAsync: updateCourse, isPending: isUpdatingCourse } = useUpdateCourse();
     const { mutate: deleteCourse } = useDeleteCourse();
     const { mutateAsync: createEvent } = useCreateEvent();
+    const { data: existingCourses = [] } = useCourses();
 
-    const [form, setForm] = useState({
+    const [form, setForm] = useState(() => ({
         name: course?.name || '',
         code: course?.code || '',
         credits: course?.credits || 3,
-        color: course?.color || COLORS[0],
-    });
+        color: course?.color || generateRandomCourseColor(existingCourses.map((c) => c.color)),
+    }));
+    const codeTouchedRef = useRef(isEditMode);
 
     const [addToSchedule, setAddToSchedule] = useState(false);
     const [slots, setSlots] = useState<Slot[]>([
@@ -58,7 +56,20 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
     // Handlers
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setForm(prev => ({ ...prev, [name]: value }));
+        setForm(prev => {
+            if (name === 'code') codeTouchedRef.current = true;
+            if (name === 'name' && !codeTouchedRef.current) {
+                return { ...prev, name: value, code: generateCourseCode(value) };
+            }
+            return { ...prev, [name]: value };
+        });
+    };
+
+    const handleRegenerateColor = () => {
+        setForm(prev => ({
+            ...prev,
+            color: generateRandomCourseColor(existingCourses.map((c) => c.color))
+        }));
     };
 
     const handleAddSlot = () => {
@@ -165,7 +176,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
 
     return (
         <div className="fixed inset-0 z-[100] flex justify-center items-center p-4 sm:p-6 bg-black/30 backdrop-blur-[2px]">
-            <div className="bg-white w-full max-w-[560px] max-h-[95vh] overflow-y-auto rounded-[24px] p-8 shadow-2xl relative scrollbar-hide">
+            <div className="bg-white w-full max-w-[560px] max-h-[95vh] overflow-y-auto rounded-lg p-8 shadow-2xl relative scrollbar-hide">
                 
                 <h2 className="text-[22px] font-bold text-[#1A1A1A] mb-8">
                     {isEditMode ? 'Modifier le cours' : 'Nouveau cours'}
@@ -195,7 +206,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                 name="code"
                                 value={form.code}
                                 onChange={handleChange}
-                                placeholder="ALGO201"
+                                placeholder="Généré du nom"
                                 required
                                 className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
                             />
@@ -220,23 +231,26 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                         </div>
                         <div className="md:col-span-2 gap-4">
                             <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                                Couleur
+                                Couleur <span className="normal-case font-medium text-[#A3A3A3]">— générée aléatoirement</span>
                             </label>
                             <div className="flex items-center h-[46px] gap-3">
-                                {COLORS.map((c) => (
-                                    <button
-                                        key={c}
-                                        type="button"
-                                        onClick={() => setForm(prev => ({ ...prev, color: c }))}
-                                        className="w-[20px] h-[20px] rounded-full transition-all relative flex items-center justify-center shrink-0"
-                                        style={{ background: c }}
-                                    >
-                                        {/* Outer black border if selected */}
-                                        {form.color === c && (
-                                            <div className="absolute -inset-[3px] rounded-full border border-[#1A1A1A]" />
-                                        )}
-                                    </button>
-                                ))}
+                                <span
+                                    className="w-[26px] h-[26px] rounded-full border border-[#E5E5E5] shadow-sm shrink-0"
+                                    style={{ background: form.color }}
+                                    title={form.color}
+                                />
+                                <span className="text-[13px] font-medium text-[#A3A3A3] uppercase">{form.color}</span>
+                                <button
+                                    type="button"
+                                    onClick={handleRegenerateColor}
+                                    aria-label="Générer une nouvelle couleur"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E5E5] text-[13px] font-medium text-[#1A1A1A] hover:bg-gray-50 transition-colors"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992V4.356m-.992 4.992a7.5 7.5 0 1 0-1.867 7.774M2.985 19.644v-4.992h4.992m-4.992 0a7.5 7.5 0 1 1 1.867-7.774" />
+                                    </svg>
+                                    Regénérer
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -259,7 +273,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                         checked={addToSchedule}
                                         onChange={(e) => setAddToSchedule(e.target.checked)}
                                     />
-                                    <div className="w-[42px] h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+                                    <div className="w-[42px] h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0d0d0d]"></div>
                                 </label>
                             </div>
 
@@ -268,7 +282,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                 <div className="flex flex-col gap-4">
                                     
                                     {slots.map((slot) => (
-                                        <div key={slot.id} className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[16px] p-5 relative flex items-center gap-6">
+                                        <div key={slot.id} className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-lg p-5 relative flex items-center gap-6">
                                             
                                             {/* Type */}
                                             <div className="w-6 shrink-0 text-center">
@@ -355,11 +369,11 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
 
                                     {/* Aperçu */}
                                     {previewItems.length > 0 && (
-                                        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-[16px] p-4 mt-2">
+                                        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-lg p-4 mt-2">
                                             <div className="text-[12px] text-[#737373] font-medium mb-3">Aperçu — événements générés</div>
                                             <div className="flex flex-wrap gap-2.5 mb-2">
                                                 {previewItems.map((item, idx) => (
-                                                    <div key={idx} className="bg-[#EFF6FF] text-[#3B82F6] px-2.5 py-1 rounded-[6px] text-[13px] font-bold border border-[#DBEAFE]">
+                                                    <div key={idx} className="bg-[#0d0d0d] text-white px-2.5 py-1 rounded-[6px] text-[13px] font-bold border border-[#0d0d0d]">
                                                         {item.str}
                                                     </div>
                                                 ))}
@@ -409,7 +423,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                             <button 
                                 type="submit" 
                                 disabled={isSubmitting || isCreatingCourse || isUpdatingCourse} 
-                                className="px-5 py-2.5 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] hover:bg-gray-50 bg-white shadow-sm transition-colors flex items-center justify-center min-w-[140px]"
+                                className="px-5 py-2.5 rounded-xl bg-[#0d0d0d] text-white text-[15px] font-medium hover:bg-[#2f2f2f] disabled:opacity-50 shadow-sm transition-colors flex items-center justify-center min-w-[140px]"
                             >
                                 {isSubmitting || isCreatingCourse || isUpdatingCourse
                                     ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

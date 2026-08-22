@@ -2,10 +2,9 @@ import type { WorksStats } from '../worksShared';
 
 interface WorksHeaderProps {
   stats: WorksStats;
-  onCreate: () => void;
 }
 
-export const WorksHeader = ({ stats, onCreate }: WorksHeaderProps) => {
+export const WorksHeader = ({ stats }: WorksHeaderProps) => {
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <div>
@@ -14,10 +13,6 @@ export const WorksHeader = ({ stats, onCreate }: WorksHeaderProps) => {
           {stats.total} travaux • {stats.planned} à rendre
         </p>
       </div>
-      <button onClick={onCreate} className="btn btn-primary whitespace-nowrap">
-        <span className="material-symbols-outlined text-[18px]">add</span>
-        Nouveau travail
-      </button>
     </div>
   );
 };

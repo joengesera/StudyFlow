@@ -42,12 +42,16 @@ const CourseCard = ({ course, tasks, events, onClick }: CourseCardProps) => {
 
   return (
     <div
-      className="card card-padded flex flex-col hover:border-primary transition-colors cursor-pointer group"
+      className="card card-padded flex flex-col transition-all cursor-pointer group hover:shadow-md border-t-[3px] rounded-t-xl"
+      style={{ borderColor: course.color }}
       onClick={() => onClick(course.id)}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-lg">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg text-white"
+            style={{ background: course.color }}
+          >
             {initial}
           </div>
           <div>

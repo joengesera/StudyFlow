@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
-import { Bell, Trash2, User, Settings, BarChart3, Smartphone, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useVisualComfort, type VisualComfortMode } from '../../hooks/useVisualComfort';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
@@ -40,7 +39,7 @@ const PersonalInfoSection = () => {
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-6">
-        <User className="text-primary text-[20px]" />
+        <span className="material-symbols-outlined text-primary text-[20px]">person</span>
         <div className="text-label-caps font-label-caps text-on-surface-variant">Informations personnelles</div>
       </div>
 
@@ -108,7 +107,7 @@ const VisualComfortSection = () => {
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-4">
-        <Settings className="text-primary text-[20px]" />
+        <span className="material-symbols-outlined text-primary text-[20px]">settings</span>
         <div className="text-label-caps font-label-caps text-on-surface-variant">Accessibilité visuelle</div>
       </div>
       <p className="text-body-md font-body-md text-on-surface-variant mb-4">Ajuste la taille globale des textes pour un meilleur confort de lecture.</p>
@@ -156,7 +155,7 @@ const SecuritySection = () => {
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-6">
-        <Lock className="text-primary text-[20px]" />
+        <span className="material-symbols-outlined text-primary text-[20px]">lock</span>
         <div className="text-label-caps font-label-caps text-on-surface-variant">Sécurité</div>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -165,7 +164,7 @@ const SecuritySection = () => {
           <div className="relative">
             <input type={showCurrent ? 'text' : 'password'} value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
             <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
-              {showCurrent ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
+              {showCurrent ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
             </button>
           </div>
         </div>
@@ -175,7 +174,7 @@ const SecuritySection = () => {
             <div className="relative">
               <input type={showNew ? 'text' : 'password'} value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
               <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
-                {showNew ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
+                {showNew ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
               </button>
             </div>
           </div>
@@ -184,7 +183,7 @@ const SecuritySection = () => {
             <div className="relative">
               <input type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
               <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
-                {showConfirm ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
+                {showConfirm ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
               </button>
             </div>
           </div>
@@ -208,7 +207,7 @@ const NotificationsSection = () => {
     <section className="card card-padded">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Bell className="text-primary text-[20px]" />
+          <span className="material-symbols-outlined text-primary text-[20px]">notifications</span>
           <div className="text-label-caps font-label-caps text-on-surface-variant">Notifications push</div>
         </div>
         <span className={`px-2.5 py-1 rounded text-label-caps font-label-caps bg-surface-container-highest text-on-surface-variant`}>
@@ -266,7 +265,7 @@ const StatsSection = () => {
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-4">
-        <BarChart3 className="text-primary text-[20px]" />
+        <span className="material-symbols-outlined text-primary text-[20px]">bar_chart</span>
         <div className="text-label-caps font-label-caps text-on-surface-variant">Statistiques du compte</div>
       </div>
       <div className="divide-y divide-outline-variant">
@@ -286,7 +285,7 @@ const PwaSection = () => {
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-4">
-        <Smartphone className="text-primary text-[20px]" />
+        <span className="material-symbols-outlined text-primary text-[20px]">smartphone</span>
         <div className="text-label-caps font-label-caps text-on-surface-variant">Application</div>
       </div>
       <div className="flex items-center gap-4">
@@ -314,7 +313,7 @@ const DangerZone = () => {
   return (
     <section className="card card-padded border-error/20 bg-error/5 relative">
       <div className="flex items-center gap-3 mb-4">
-        <Trash2 className="text-error text-[20px]" />
+        <span className="material-symbols-outlined text-error text-[20px]">delete</span>
         <div className="text-label-caps font-label-caps text-error">Zone dangereuse</div>
       </div>
       <div className="flex justify-between items-center">

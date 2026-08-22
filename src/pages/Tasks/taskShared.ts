@@ -1,6 +1,7 @@
 import { differenceInDays, format, isToday, isTomorrow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { Task, TaskStatus } from '../../types';
+import { matchCourses, type CourseRef } from '../../utils/courseMeta';
 
 export type Column = TaskStatus;
 
@@ -14,9 +15,9 @@ export interface TaskColumnDef {
 }
 
 export const columns: TaskColumnDef[] = [
-  { key: 'PENDING', label: 'À faire', icon: 'radio_button_unchecked', dot: 'var(--color-on-surface-variant)', border: 'border-outline-variant', bg: 'bg-surface-container-low' },
-  { key: 'IN_PROGRESS', label: 'En cours', icon: 'play_circle', dot: 'var(--color-tertiary)', border: 'border-tertiary', bg: 'bg-tertiary/5' },
-  { key: 'COMPLETED', label: 'Terminées', icon: 'check_circle', dot: 'var(--color-primary)', border: 'border-outline-variant', bg: 'bg-primary/5' },
+  { key: 'PENDING', label: 'À faire', icon: 'radio_button_unchecked', dot: 'var(--color-status-todo)', border: 'border-status-todo/40', bg: 'bg-status-todo/[0.04]' },
+  { key: 'IN_PROGRESS', label: 'En cours', icon: 'play_circle', dot: 'var(--color-status-progress)', border: 'border-status-progress/40', bg: 'bg-status-progress/[0.04]' },
+  { key: 'COMPLETED', label: 'Terminées', icon: 'check_circle', dot: 'var(--color-status-done)', border: 'border-status-done/40', bg: 'bg-status-done/[0.04]' },
   { key: 'CANCELED', label: 'Annulées', icon: 'cancel', dot: 'var(--color-outline)', border: 'border-outline-variant', bg: 'bg-surface-container-low' },
 ];
 
@@ -52,6 +53,7 @@ export interface SmartInputResult {
   endDate: string | null;
   priority: Task['priority'];
   recurrence: string | null;
+  matchedCourses: CourseRef[];
 }
 
 const EVENT_KEYWORDS = [
@@ -171,7 +173,7 @@ const cleanSmartTitle = (rawText: string) => {
   return cleaned || rawText.trim();
 };
 
-export function parseSmartInput(text: string): SmartInputResult | null {
+export function parseSmartInput(text: string, courses: CourseRef[] = []): SmartInputResult | null {
   if (!text.trim()) return null;
 
   const normalizedText = normalizeForMatch(text);
@@ -195,5 +197,6 @@ export function parseSmartInput(text: string): SmartInputResult | null {
     endDate,
     priority: detectPriority(normalizedText),
     recurrence,
+    matchedCourses: matchCourses(text, courses),
   };
 }

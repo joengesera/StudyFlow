@@ -11,6 +11,8 @@ interface KanbanColumnProps {
   onSelect: (task: Task) => void;
   selectedTaskId: string | null;
   onAddTask: (status: Column) => void;
+  isCollapsed: boolean;
+  onToggle: () => void;
 }
 
 export const KanbanColumn = ({
@@ -20,43 +22,71 @@ export const KanbanColumn = ({
   onSelect,
   selectedTaskId,
   onAddTask,
+  isCollapsed,
+  onToggle,
 }: KanbanColumnProps) => {
-  const { setNodeRef } = useDroppable({ id: column.key });
+  const { setNodeRef, isOver } = useDroppable({ id: column.key });
 
   return (
-    <div ref={setNodeRef} className={`flex h-full min-h-0 flex-1 flex-col min-w-[300px] rounded-xl border border-outline-variant p-2.5 pt-4 ${column.bg}`}>
-      <div className="flex items-center gap-2 mb-4 px-3">
-        <span className="material-symbols-outlined text-[20px]" style={{ color: column.dot }}>{column.icon}</span>
-        <span className="text-label-sm font-label-sm text-on-surface">{column.label}</span>
-        <span className="bg-surface-container-lowest border border-outline-variant text-label-sm font-label-sm text-on-surface px-2 py-0.5 rounded-full ml-1">
+    <section
+      ref={setNodeRef}
+      aria-label={`${column.label} — ${tasks.length} tâches`}
+      style={isOver ? { boxShadow: `inset 0 0 0 2px ${column.dot}` } : undefined}
+      className={`flex flex-col rounded-lg border ${column.border} ${column.bg} transition-shadow ${
+        isCollapsed ? 'basis-full md:basis-auto' : 'flex-1 basis-full min-w-[270px]'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!isCollapsed}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left cursor-pointer select-none"
+      >
+        <span className="material-symbols-outlined text-[20px]" style={{ color: column.dot }}>
+          {column.icon}
+        </span>
+        <span className="text-label-sm font-label-sm font-medium text-on-surface">{column.label}</span>
+        <span className="bg-surface-container-lowest border border-outline-variant text-label-sm font-label-sm text-on-surface px-2 py-0.5 rounded-full">
           {tasks.length}
         </span>
-      </div>
-
-      <div className="flex flex-col flex-1 min-h-[150px] overflow-y-auto px-1">
-        <SortableContext
-          items={tasks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
+        <span
+          className={`material-symbols-outlined text-[20px] text-on-surface-variant ms-auto transition-transform duration-200 ${
+            isCollapsed ? '' : 'rotate-180'
+          }`}
         >
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              courseName={task.courseId ? courses[task.courseId] : undefined}
-              onSelect={onSelect}
-              isSelected={selectedTaskId === task.id}
-            />
-          ))}
-        </SortableContext>
+          expand_more
+        </span>
+      </button>
 
-        <button
-          onClick={() => onAddTask(column.key)}
-          className="w-full py-3 rounded-lg border border-outline-variant text-label-sm font-label-sm text-on-surface-variant mt-2 mb-2 bg-transparent hover:bg-surface-container-low transition-colors"
-        >
-          <span className="material-symbols-outlined text-[18px] me-1">add</span>
-          Ajouter
-        </button>
-      </div>
-    </div>
+      {!isCollapsed && (
+        <div className="flex flex-col px-2 pb-2">
+          <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                courseName={task.courseId ? courses[task.courseId] : undefined}
+                onSelect={onSelect}
+                isSelected={selectedTaskId === task.id}
+              />
+            ))}
+          </SortableContext>
+
+          {tasks.length === 0 && (
+            <p className="text-label-sm font-label-sm text-on-surface-variant text-center py-4">
+              Aucune tâche ici
+            </p>
+          )}
+
+          <button
+            onClick={() => onAddTask(column.key)}
+            className="w-full py-3 rounded-lg border border-outline-variant text-label-sm font-label-sm text-on-surface-variant mt-2 bg-transparent hover:bg-surface-container-low transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px] me-1">add</span>
+            Ajouter
+          </button>
+        </div>
+      )}
+    </section>
   );
 };
