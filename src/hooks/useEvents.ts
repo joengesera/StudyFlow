@@ -69,7 +69,7 @@ export const useCreateEvent = () => {
             queryClient.invalidateQueries({ queryKey: eventKeys.all });
         },
 
-        onSettled: (_data, _err, _vars, _ctx) => {
+        onSettled: () => {
             // Met à jour aussi le cache store local après succès ou echec
             const fresh = queryClient.getQueryData<Event[]>(eventKeys.all);
             if (fresh) setCacheEvents(fresh);

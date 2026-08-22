@@ -5,10 +5,12 @@ import { createAccountScopedIndexedDbStorage } from '../storage/accountScopedInd
 
 export interface SyncAction {
   id: string;
-  method: string;
-  url: string;
-  payload?: any;
+  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  entity: 'Task' | 'Event' | 'Grade' | 'Work' | 'Course';
+  data: Record<string, unknown>;
+  deviceId: string;
   timestamp: number;
+  localId?: string;
 }
 
 interface EntityCache {

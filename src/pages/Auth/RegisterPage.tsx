@@ -2,195 +2,361 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { isAxiosError } from 'axios';
+import { Eye, EyeOff, Mail, Lock, User, CheckCircle2, ArrowRight } from 'lucide-react';
+import logo from '@/assets/Fichier1.svg';
 
 export default function RegisterPage() {
-    const { register, isRegisterLoading, registerError } = useAuth();
+  const { register, isRegisterLoading, registerError } = useAuth();
 
-    const [form, setForm] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateField = (name: string, value: string) => {
+    let error = '';
+    switch (name) {
+      case 'firstName':
+        if (value && value.length < 2) error = 'Au moins 2 caractères';
+        break;
+      case 'lastName':
+        if (value && value.length < 2) error = 'Au moins 2 caractères';
+        break;
+      case 'email':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = 'Email invalide';
+        break;
+      case 'password':
+        if (value && value.length < 8) error = '8 caractères minimum';
+        break;
+      case 'confirmPassword':
+        if (value && value !== form.password) error = 'Les mots de passe ne correspondent pas';
+        break;
+    }
+    setErrors(prev => ({ ...prev, [name]: error }));
+    return !error;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    if (value) validateField(name, value);
+  };
+
+  const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {
+    validateField(e.target.name, e.target.value);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    let hasError = false;
+    const newErrors: Record<string, string> = {};
+
+    if (!form.firstName.trim() || form.firstName.length < 2) {
+      newErrors.firstName = 'Prénom requis (2 caractères min.)';
+      hasError = true;
+    }
+    if (!form.lastName.trim() || form.lastName.length < 2) {
+      newErrors.lastName = 'Nom requis (2 caractères min.)';
+      hasError = true;
+    }
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = 'Email invalide';
+      hasError = true;
+    }
+    if (!form.password || form.password.length < 8) {
+      newErrors.password = '8 caractères minimum';
+      hasError = true;
+    }
+    if (form.password !== form.confirmPassword) {
+      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+      hasError = true;
+    }
+
+    setErrors(newErrors);
+    if (hasError) return;
+
+    register({
+      name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+      email: form.email,
+      password: form.password,
     });
-    const [localError, setLocalError] = useState('');
+  };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-        setLocalError('');
-    };
+  const backendError = registerError && isAxiosError(registerError)
+    ? registerError.response?.data?.error?.message ?? 'Une erreur est survenue.'
+    : null;
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setLocalError('');
+  const inputClass = (fieldError?: string) =>
+    `input input-bordered w-full pl-10 pr-12 h-12 text-base transition-all ${
+      fieldError ? 'input-error border-error/30 focus:border-error focus:ring-error/20' : ''
+    }`;
 
-        // Validation locale avant d'appeler l'API
-        if (form.password !== form.confirmPassword) {
-            setLocalError('Les mots de passe ne correspondent pas.');
-            return;
-        }
-        if (form.password.length < 8) {
-            setLocalError('Le mot de passe doit contenir au moins 8 caractères.');
-            return;
-        }
-
-        register({
-            name: `${form.firstName} ${form.lastName}`.trim(),
-            email: form.email,
-            password: form.password
-        });
-    };
-
-    // Erreur venant du backend
-    const backendError = registerError && isAxiosError(registerError)
-        ? registerError.response?.data?.error?.message ?? 'Une erreur est survenue.'
-        : null;
-
-    const error = localError || backendError;
-
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-base-200 p-4">
-            <div className="flex w-full max-w-3xl rounded-2xl overflow-hidden shadow-lg">
-
-                {/* ── GAUCHE : Formulaire ── */}
-                <div className="flex-1 bg-base-100 p-10 flex flex-col justify-center">
-
-                    <div className="mb-7">
-                        <h1 className="text-xl font-medium text-base-content">Créer un compte</h1>
-                        <p className="text-sm text-base-content/50 mt-1">
-                            Commence à gérer tes cours et tâches
-                        </p>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-
-                        {/* Prénom + Nom */}
-                        <div className="flex gap-3">
-                            <div className="flex-1">
-                                <label className="text-xs text-base-content/50 mb-1 block">Prénom</label>
-                                <input
-                                    name="firstName"
-                                    type="text"
-                                    placeholder="Lucas"
-                                    value={form.firstName}
-                                    onChange={handleChange}
-                                    required
-                                    className="input input-bordered input-sm w-full"
-                                />
-                            </div>
-                            <div className="flex-1">
-                                <label className="text-xs text-base-content/50 mb-1 block">Nom</label>
-                                <input
-                                    name="lastName"
-                                    type="text"
-                                    placeholder="Martin"
-                                    value={form.lastName}
-                                    onChange={handleChange}
-                                    required
-                                    className="input input-bordered input-sm w-full"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Email */}
-                        <div>
-                            <label className="text-xs text-base-content/50 mb-1 block">Email universitaire</label>
-                            <input
-                                name="email"
-                                type="email"
-                                placeholder="lucas@univ.fr"
-                                value={form.email}
-                                onChange={handleChange}
-                                required
-                                className="input input-bordered input-sm w-full"
-                            />
-                        </div>
-
-                        {/* Mot de passe */}
-                        <div>
-                            <label className="text-xs text-base-content/50 mb-1 block">Mot de passe</label>
-                            <input
-                                name="password"
-                                type="password"
-                                placeholder="8 caractères minimum"
-                                value={form.password}
-                                onChange={handleChange}
-                                required
-                                className="input input-bordered input-sm w-full"
-                            />
-                        </div>
-
-                        {/* Confirmer */}
-                        <div>
-                            <label className="text-xs text-base-content/50 mb-1 block">Confirmer le mot de passe</label>
-                            <input
-                                name="confirmPassword"
-                                type="password"
-                                placeholder="••••••••"
-                                value={form.confirmPassword}
-                                onChange={handleChange}
-                                required
-                                className="input input-bordered input-sm w-full"
-                            />
-                        </div>
-
-                        {/* Erreur */}
-                        {error && (
-                            <div className="text-xs text-error">{error}</div>
-                        )}
-
-                        {/* Submit */}
-                        <button
-                            type="submit"
-                            disabled={isRegisterLoading}
-                            className="btn btn-neutral btn-sm w-full mt-1"
-                        >
-                            {isRegisterLoading
-                                ? <span className="loading loading-spinner loading-xs" />
-                                : 'Créer mon compte'
-                            }
-                        </button>
-
-                    </form>
-
-                    <p className="text-xs text-center text-base-content/40 mt-5">
-                        Déjà un compte ?{' '}
-                        <Link to="/login" className="text-base-content font-medium">
-                            Se connecter
-                        </Link>
-                    </p>
-
+  return (
+    <div className="auth-bg-shell min-h-screen bg-base-200 px-3 py-6 sm:px-6 sm:py-10 lg:px-8">
+      <div aria-hidden="true" className="auth-bg-tint" />
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-5xl items-center justify-center sm:min-h-[calc(100vh-5rem)]">
+        <div className="w-full overflow-hidden rounded-2xl bg-base-100/95 shadow-lg backdrop-blur-[2px] md:grid md:grid-cols-[1fr_420px]">
+          {/* Left: Brand Panel */}
+          <div className="hidden shrink-0 flex-col items-center justify-center bg-base-200/50 p-8 md:flex border-r border-base-200 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+            <div className="relative z-10 w-full max-w-sm text-center">
+              <div className="mb-6">
+                <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-4">
+                  <img src={logo} alt="StudyFlow" className="h-10 w-10" />
                 </div>
+                <h2 className="text-2xl font-bold text-base-content">StudyFlow</h2>
+                <p className="mt-1 text-sm text-base-content/50">Ton assistant académique</p>
+              </div>
 
-                {/* ── DROITE : Visuel ── */}
-                <div className="w-64 bg-neutral flex flex-col items-center justify-center p-8 shrink-0">
-
-                    <div className="text-4xl mb-3">📚</div>
-                    <div className="text-sm font-medium text-neutral-content mb-1">StudentApp</div>
-                    <div className="text-xs text-neutral-content/40 text-center mb-8">
-                        Ton assistant académique
+              <div className="space-y-3 text-left">
+                {[
+                  { icon: '📅', title: 'Agenda intelligent', desc: 'Cours, examens, révisions planifiés' },
+                  { icon: '✅', title: 'Gestion des tâches', desc: 'Board Kanban + Pomodoro intégré' },
+                  { icon: '📊', title: 'Suivi des notes', desc: 'Moyennes, simulateur, statistiques' },
+                  { icon: '⚠️', title: 'Analyse de risque', desc: 'Anticipe les difficultés avant l\'examen' },
+                ].map((feature) => (
+                  <div
+                    key={feature.title}
+                    className="flex items-start gap-3 p-3 rounded-xl bg-base-100/50 border border-base-200 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-base shrink-0">
+                      <span>{feature.icon}</span>
                     </div>
-
-                    {[
-                        { icon: '📅', title: 'Agenda intelligent', sub: 'Cours, examens, révisions' },
-                        { icon: '✅', title: 'Gestion des tâches', sub: 'Board Kanban + Pomodoro' },
-                        { icon: '📊', title: 'Suivi des notes', sub: 'Moyennes et statistiques' },
-                        { icon: '⚠️', title: 'Analyse de risque', sub: 'Anticipe les difficultés' },
-                    ].map((f) => (
-                        <div key={f.title} className="flex items-start gap-3 mb-5 last:mb-0">
-                            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-sm shrink-0">
-                                {f.icon}
-                            </div>
-                            <div>
-                                <div className="text-xs font-medium text-neutral-content">{f.title}</div>
-                                <div className="text-xs text-neutral-content/40">{f.sub}</div>
-                            </div>
-                        </div>
-                    ))}
-
-                </div>
-
+                    <div>
+                      <p className="text-sm font-medium text-base-content">{feature.title}</p>
+                      <p className="text-xs text-base-content/50 mt-0.5">{feature.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          </div>
+
+          {/* Right: Form */}
+          <div className="flex flex-col justify-center p-5 sm:p-8 md:p-10 lg:p-12">
+            <div className="mb-8 md:hidden flex items-center gap-3 justify-center">
+              <div className="h-10 w-10 rounded-xl bg-neutral/10 flex items-center justify-center">
+                <img src={logo} alt="logo" className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-base-content">StudyFlow</p>
+                <p className="text-xs text-base-content/60">Ton assistant académique</p>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-base-content tracking-tight">Créer ton compte</h1>
+              <p className="mt-2 text-base text-base-content/50">Commence à gérer tes cours et tâches dès maintenant</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex w-full max-w-xl flex-col gap-5">
+              {/* First Name + Last Name */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative" data-error={!!errors.firstName}>
+                  <label htmlFor="firstName" className="mb-1.5 block text-xs font-medium text-base-content/60">
+                    Prénom
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
+                    <input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      autoComplete="given-name"
+                      placeholder="Lucas"
+                      value={form.firstName}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      required
+                      className={inputClass(errors.firstName)}
+                      aria-invalid={!!errors.firstName}
+                      aria-describedby={errors.firstName ? 'firstname-error' : undefined}
+                    />
+                  </div>
+                  {errors.firstName && (
+                    <p id="firstname-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
+                      {errors.firstName}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex-1 relative" data-error={!!errors.lastName}>
+                  <label htmlFor="lastName" className="mb-1.5 block text-xs font-medium text-base-content/60">
+                    Nom
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
+                    <input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      autoComplete="family-name"
+                      placeholder="Martin"
+                      value={form.lastName}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      required
+                      className={inputClass(errors.lastName)}
+                      aria-invalid={!!errors.lastName}
+                      aria-describedby={errors.lastName ? 'lastname-error' : undefined}
+                    />
+                  </div>
+                  {errors.lastName && (
+                    <p id="lastname-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
+                      {errors.lastName}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="relative" data-error={!!errors.email}>
+                <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-base-content/60">
+                  Email universitaire
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="lucas@univ.fr"
+                    value={form.email}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    required
+                    className={inputClass(errors.email)}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
+                  />
+                </div>
+                {errors.email && (
+                  <p id="email-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
+                    {errors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="relative" data-error={!!errors.password}>
+                <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-base-content/60">
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    required
+                    className={inputClass(errors.password)}
+                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? 'password-error' : undefined}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/30 hover:text-base-content/60 transition-colors"
+                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p id="password-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
+                    {errors.password}
+                  </p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="relative" data-error={!!errors.confirmPassword || !!backendError}>
+                <label htmlFor="confirmPassword" className="mb-1.5 block text-xs font-medium text-base-content/60">
+                  Confirmer le mot de passe
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    required
+                    className={inputClass(errors.confirmPassword || backendError ? 'backend' : '')}
+                    aria-invalid={!!(errors.confirmPassword || backendError)}
+                    aria-describedby={errors.confirmPassword ? 'confirm-error' : backendError ? 'backend-error' : undefined}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/30 hover:text-base-content/60 transition-colors"
+                    aria-label={showConfirmPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    aria-pressed={showConfirmPassword}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p id="confirm-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
+                    {errors.confirmPassword}
+                  </p>
+                )}
+                {backendError && !errors.confirmPassword && (
+                  <p id="backend-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    {backendError}
+                  </p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isRegisterLoading}
+                className="btn btn-primary w-full h-12 text-base font-medium mt-2 transition-all hover:shadow-lg hover:shadow-primary/25 disabled:opacity-50 disabled:hover:shadow-none"
+              >
+                {isRegisterLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="loading loading-spinner loading-sm" />
+                    Création en cours...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    Créer mon compte
+                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </span>
+                )}
+              </button>
+            </form>
+
+            <p className="mt-7 text-center text-sm text-base-content/50">
+              Déjà un compte ?{' '}
+              <Link to="/login" className="font-medium text-primary hover:text-primary/70 transition-colors">
+                Se connecter
+              </Link>
+            </p>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

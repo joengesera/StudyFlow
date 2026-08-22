@@ -121,7 +121,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                 if (addToSchedule && slots.length > 0) {
                     const WEEKS_TO_GENERATE = 15;
                     const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-                    const eventPromises: Promise<any>[] = [];
+                    const eventPromises: Promise<unknown>[] = [];
 
                     for (let week = 0; week < WEEKS_TO_GENERATE; week++) {
                         for (const slot of slots) {

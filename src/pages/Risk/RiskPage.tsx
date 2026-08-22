@@ -237,7 +237,7 @@ const Tips = ({ courses, risks }: TipsProps) => {
                     if (risk.level === 'MEDIUM') circleColor = '#FBBF24';
 
                     // Mock générique ressemblant à la maquette
-                    let title = `${course?.name || 'Cours'}`;
+                    const title = `${course?.name || 'Cours'}`;
                     let subTitle = '';
                     let message = '';
 

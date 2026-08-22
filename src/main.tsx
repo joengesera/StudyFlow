@@ -20,9 +20,9 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 10,
       gcTime: 1000 * 60 * 30,
       retry: 1,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
+      refetchOnWindowFocus: 'always',
+      refetchOnReconnect: 'always',
+      refetchOnMount: 'always',
     },
   },
 });
