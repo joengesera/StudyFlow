@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useCourse, useCourseWorkTypes } from '../../hooks/useCourses';
 import { useGrades, useCreateGrade } from '../../hooks/useGrades';
 import { useEvents } from '../../hooks/useEvents';

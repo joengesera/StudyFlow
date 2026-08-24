@@ -118,6 +118,5 @@ export interface RiskAnalysis {
 }
 
 export interface Token {
-    accessToken:string,
-    refreshToken:string
+    accessToken: string
 }

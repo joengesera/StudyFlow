@@ -8,11 +8,13 @@ export const getDeviceId = (): string => {
   return id;
 };
 
-export const extractEntityFromUrl = (url: string | undefined): string => {
+export type SyncEntity = 'Task' | 'Event' | 'Grade' | 'Work' | 'Course' | 'Unknown';
+
+export const extractEntityFromUrl = (url: string | undefined): SyncEntity => {
   if (!url) return 'Unknown';
   const match = url.match(/^\/?(tasks|events|grades|works|courses)/);
   if (!match) return 'Unknown';
-  const entityMap: Record<string, string> = {
+  const entityMap: Record<string, SyncEntity> = {
     tasks: 'Task',
     events: 'Event',
     grades: 'Grade',

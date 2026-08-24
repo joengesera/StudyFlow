@@ -6,7 +6,7 @@ import { createAccountScopedIndexedDbStorage } from '../storage/accountScopedInd
 export interface SyncAction {
   id: string;
   type: 'CREATE' | 'UPDATE' | 'DELETE';
-  entity: 'Task' | 'Event' | 'Grade' | 'Work' | 'Course';
+  entity: 'Task' | 'Event' | 'Grade' | 'Work' | 'Course' | 'Unknown';
   data: Record<string, unknown>;
   deviceId: string;
   timestamp: number;

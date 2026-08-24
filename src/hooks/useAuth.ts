@@ -13,10 +13,7 @@ export const useAuth = () => {
 
     // ─── Logout ───────────────────────────────────────────────
     const logoutMutation = useMutation({
-        mutationFn: () => {
-            const tokens = useAuthStore.getState().tokens;
-            return authAPI.logout(tokens?.refreshToken ?? '');
-        },
+        mutationFn: () => authAPI.logout(),
         onSettled: () => {
             // 1. Vider le store d'authentification
             logout();
@@ -31,7 +28,7 @@ export const useAuth = () => {
     const loginMutation = useMutation({
         mutationFn: authAPI.login,
         onSuccess: (data) => {
-            login(data.user, data.tokens);
+            login(data.user, { accessToken: data.accessToken });
             // Petit délai pour laisser Zustand persister avant la navigation
             setTimeout(() => navigate('/dashboard'), 50);
         },
@@ -44,7 +41,7 @@ export const useAuth = () => {
     const registerMutation = useMutation({
         mutationFn: authAPI.register,
         onSuccess: (data) => {
-            login(data.user, data.tokens);
+            login(data.user, { accessToken: data.accessToken });
             setTimeout(() => navigate('/dashboard'), 50);
         },
     });

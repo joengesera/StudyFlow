@@ -46,7 +46,7 @@ export function useNetworkSync() {
       try {
         const response = await apiClient.post<SyncResponse>('/sync/push', action, {
           _isSync: true,
-        });
+        } as never);
 
         const result = response.data?.data;
 

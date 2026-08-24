@@ -13,8 +13,9 @@ export interface User {
     updatedAt: string;
 }
 
+// Le refresh token vit dans un cookie httpOnly posé par le backend :
+// il n'est jamais manipulé en JavaScript.
 export interface Tokens {
-    refreshToken: string;
     accessToken: string;
 }
 
@@ -62,6 +63,20 @@ export const useAuthStore = create<AuthState>()(
         }),
         {
             name: 'auth-storage',
+            version: 2,
+            // v2 : le refresh token ne vit plus côté JS (cookie httpOnly),
+            // on purge les données persistées des versions précédentes.
+            migrate: (persisted) => {
+                const state = (persisted ?? {}) as Partial<AuthState> & {
+                    tokens?: { accessToken?: string; refreshToken?: string };
+                };
+                return {
+                    ...state,
+                    tokens: state.tokens?.accessToken
+                        ? { accessToken: state.tokens.accessToken }
+                        : null,
+                } as AuthState;
+            },
         },
     ),
 );

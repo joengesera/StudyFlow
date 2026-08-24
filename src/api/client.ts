@@ -13,19 +13,19 @@ export const unwrapApiData = <T>(payload: unknown): T => {
 };
 
 const normalizeErrorPayload = (payload: unknown) => {
-  const p = payload as Record<string, unknown> | null;
+  const p = payload as Record<string, any> | null;
   if (p?.error && typeof p.error === 'object' && p.error !== null && 'message' in p.error) return payload;
 
   const fallbackMessage =
-    payload?.message ||
-    payload?.error ||
+    p?.message ||
+    p?.error ||
     'Une erreur est survenue.';
 
   return {
     success: false,
     error: {
       message: String(fallbackMessage),
-      code: payload?.error?.code
+      code: p?.error?.code
     }
   };
 };
@@ -33,6 +33,7 @@ const normalizeErrorPayload = (payload: unknown) => {
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
+  withCredentials: true, // nécessaire pour recevoir le cookie de refresh token
   headers: {
     'Content-Type': 'application/json'
   }
@@ -45,6 +46,28 @@ const refreshClient = axios.create({
   },
   withCredentials: true
 });
+
+// ─── SINGLE-FLIGHT REFRESH ───
+// Une seule requête de refresh à la fois : si plusieurs requêtes reçoivent
+// un 401 en parallèle, elles attendent toutes la même promesse au lieu de
+// déclencher des rotations concurrentes (qui feraient échouer le refresh).
+let refreshPromise: Promise<string> | null = null;
+
+const performRefresh = async (): Promise<string> => {
+  const { data } = await refreshClient.post('/auth/refresh-token');
+  const { accessToken } = unwrapApiData<{ accessToken: string }>(data);
+  useAuthStore.getState().setTokens({ accessToken });
+  return accessToken;
+};
+
+const refreshAccessToken = (): Promise<string> => {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+};
 
 apiClient.interceptors.request.use((config) => {
   const tokens = useAuthStore.getState().tokens;
@@ -59,15 +82,15 @@ apiClient.interceptors.response.use(
   async (error) => {
     // ─── OFFLINE INTERCEPTOR ───
     if ((!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK')) || !navigator.onLine) {
-      const config = error.config as Record<string, unknown> | undefined;
+      const config = (error.config || {}) as Record<string, any>;
 
       // Si c'est une requête de synchronisation (background), on rejette l'erreur directement
       // pour éviter de l'ajouter à nouveau dans la file.
-      if (config?._isSync) {
+      if (config._isSync) {
         return Promise.reject(error);
       }
 
-      if (config && config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
+      if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
         
         const payload = config.data ? JSON.parse(config.data as string) : undefined;
         const temporaryId = crypto.randomUUID();
@@ -93,16 +116,11 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const currentTokens = useAuthStore.getState().tokens;
-        if (!currentTokens?.refreshToken) throw new Error('Pas de refresh token');
-
-        const { data } = await refreshClient.post('/auth/refresh-token', { refreshToken: currentTokens.refreshToken });
-        const newTokens = unwrapApiData<{ accessToken: string; refreshToken: string }>(data);
-
-        useAuthStore.getState().setTokens(newTokens);
+        // Le refresh token est envoyé automatiquement via le cookie httpOnly.
+        const accessToken = await refreshAccessToken();
 
         originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch {
         useAuthStore.getState().logout();

@@ -1,5 +1,5 @@
 import { apiClient, unwrapApiData } from './client';
-import type {User, Tokens} from '../stores/authStore';
+import type { User } from '../stores/authStore';
 
 interface RegisterPayload {
   email: string;
@@ -17,9 +17,11 @@ interface ResetPasswordPayload {
   newPassword: string;
 }
 
+// Le refresh token est géré par cookie httpOnly : seul l'access token
+// transite dans les réponses.
 export interface AuthResponse {
   user: User;
-  tokens: Tokens;
+  accessToken: string;
 }
 
 export const authAPI = {
@@ -35,8 +37,8 @@ export const authAPI = {
     const { data } = await apiClient.post('/auth/reset-password', payload);
     return unwrapApiData<{ message: string }>(data);
   },
-  logout: async (refreshToken: string): Promise<{ message: string }> => {
-    const { data } = await apiClient.post('/auth/logout', { refreshToken });
+  logout: async (): Promise<{ message: string }> => {
+    const { data } = await apiClient.post('/auth/logout');
     return unwrapApiData<{ message: string }>(data);
   },
   forgotPassword: async (email: string): Promise<{ message: string }> => {

@@ -231,12 +231,12 @@ const NotificationsSection = () => {
 
       <div className="text-label-caps font-label-caps text-on-surface-variant mb-2">Préférences de notification</div>
       <div className="space-y-0 divide-y divide-outline-variant">
-        {[
+        {([
           { key: 'examReminder', label: 'Rappel avant un examen', sub: '24h et 1h avant' },
           { key: 'lateTasks', label: 'Tâches en retard', sub: 'Notification quotidienne' },
           { key: 'highRisk', label: 'Cours à risque élevé', sub: 'Quand le score dépasse HIGH' },
           { key: 'weeklySummary', label: 'Résumé hebdomadaire', sub: 'Chaque lundi matin' },
-        ].map((item) => (
+        ] as const).map((item) => (
           <div key={item.key} className="flex justify-between items-center py-4">
             <div>
               <div className="text-body-md font-body-md font-medium text-on-surface">{item.label}</div>
