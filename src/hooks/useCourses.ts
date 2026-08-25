@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesAPI } from '../api/course.api';
-import { useSyncStore } from '../stores/syncStore';
+import { insertEntityInCaches, isOfflineMutationResult, removeEntityFromCaches } from '../sync/offlineCaches';
 import type { Course } from '../types';
 
 export const courseKeys = {
@@ -9,18 +9,9 @@ export const courseKeys = {
 };
 
 export const useCourses = () => {
-    const setCacheCourses = useSyncStore((s) => s.setCacheCourses);
-    const cachedCourses = useSyncStore((s) => s.cache.courses);
-
     return useQuery({
         queryKey: courseKeys.all,
-        queryFn: async () => {
-            const courses = await coursesAPI.getAll();
-            // Persiste dans le browser store pour usage offline
-            setCacheCourses(courses);
-            return courses;
-        },
-        initialData: cachedCourses.length > 0 ? cachedCourses : undefined,
+        queryFn: coursesAPI.getAll,
         staleTime: 30_000,
     });
 };
@@ -41,12 +32,31 @@ export const useCourseWorkTypes = (courseId?: string) => {
     });
 };
 
+const buildOptimisticCourse = (id: string, payload: Partial<Course>): Course => ({
+    id,
+    code: payload.code ?? '',
+    name: payload.name ?? '',
+    description: payload.description ?? null,
+    color: payload.color ?? '#607d8b',
+    credits: payload.credits ?? null,
+    userId: payload.userId ?? '',
+    isDeleted: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    syncStatus: 'PENDING',
+});
+
 export const useCreateCourse = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: coursesAPI.create,
-        onSuccess: () => {
+        mutationFn: (payload: Partial<Course>) => {
+            const localId = payload.id ?? crypto.randomUUID();
+            insertEntityInCaches(queryClient, 'Course', buildOptimisticCourse(localId, payload));
+            return coursesAPI.create({ ...payload, id: localId });
+        },
+        onSuccess: (created) => {
+            if (isOfflineMutationResult(created)) return;
             queryClient.invalidateQueries({ queryKey: courseKeys.all });
         },
     });
@@ -69,7 +79,10 @@ export const useDeleteCourse = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: coursesAPI.delete,
+        mutationFn: (id: string) => {
+            removeEntityFromCaches(queryClient, 'Course', id);
+            return coursesAPI.delete(id);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: courseKeys.all });
         },

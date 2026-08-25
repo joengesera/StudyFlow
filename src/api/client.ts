@@ -3,6 +3,13 @@ import { useAuthStore } from '../stores/authStore';
 import { useSyncStore } from '../stores/syncStore';
 import { getDeviceId, extractEntityFromUrl, methodToSyncType } from '../utils/deviceId';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** Marque une requête interne de synchronisation (à ne pas re-enfiler). */
+    _isSync?: boolean;
+  }
+}
+
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 export const unwrapApiData = <T>(payload: unknown): T => {
@@ -13,7 +20,11 @@ export const unwrapApiData = <T>(payload: unknown): T => {
 };
 
 const normalizeErrorPayload = (payload: unknown) => {
-  const p = payload as Record<string, any> | null;
+  const p = payload as {
+    error?: { message?: unknown; code?: unknown };
+    message?: unknown;
+  } | null;
+
   if (p?.error && typeof p.error === 'object' && p.error !== null && 'message' in p.error) return payload;
 
   const fallbackMessage =
@@ -77,12 +88,44 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Extrait l'id distant d'une URL du type /tasks/{id} — indispensable pour
+// que les UPDATE/DELETE mis en file ciblent la bonne entité côté backend.
+const extractRemoteIdFromUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  const match = url.match(/^\/?(?:tasks|events|grades|works|courses)\/([^/?#]+)/);
+  return match?.[1];
+};
+
+// Demande au service worker de vider la file même si l'onglet est fermé.
+const requestBackgroundSync = () => {
+  try {
+    navigator.serviceWorker?.ready
+      .then((reg) =>
+        (reg as ServiceWorkerRegistration & {
+          sync?: { register: (tag: string) => Promise<void> };
+        }).sync?.register('studyflow-sync'),
+      )
+      .catch(() => undefined);
+  } catch {
+    // Background Sync non supporté → la vidange se fera via useNetworkSync.
+  }
+};
+
+interface InterceptedRequestConfig {
+  method?: string;
+  url?: string;
+  data?: string;
+  headers?: Record<string, string>;
+  _retry?: boolean;
+  _isSync?: boolean;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     // ─── OFFLINE INTERCEPTOR ───
     if ((!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK')) || !navigator.onLine) {
-      const config = (error.config || {}) as Record<string, any>;
+      const config = (error.config || {}) as InterceptedRequestConfig;
 
       // Si c'est une requête de synchronisation (background), on rejette l'erreur directement
       // pour éviter de l'ajouter à nouveau dans la file.
@@ -91,21 +134,30 @@ apiClient.interceptors.response.use(
       }
 
       if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
-        
+
         const payload = config.data ? JSON.parse(config.data as string) : undefined;
-        const temporaryId = crypto.randomUUID();
+        // Identité cohérente pour toute la vie de la mutation :
+        // id fourni par le hook (créations optimistes) > id extrait de l'URL
+        // (update/delete) > uuid fraîchement généré.
+        const identity =
+          (typeof payload?.id === 'string' ? payload.id : undefined)
+          ?? extractRemoteIdFromUrl(config.url)
+          ?? crypto.randomUUID();
+
         const syncPayload = {
           type: methodToSyncType(config.method),
           entity: extractEntityFromUrl(config.url),
-          data: { ...payload, id: payload?.id ?? temporaryId, localId: temporaryId },
-          deviceId: getDeviceId()
+          data: { ...payload, id: identity },
+          deviceId: getDeviceId(),
+          localId: identity,
         };
 
         // On push la mutation en file d'attente (format backend)
         useSyncStore.getState().enqueueAction(syncPayload);
+        requestBackgroundSync();
 
         // Fausse réponse de succès pour éviter que l'UI plante et permettre l'Optimistic UI
-        return Promise.resolve({ data: { success: true, offline: true, _temporaryId: temporaryId } });
+        return Promise.resolve({ data: { success: true, offline: true, _temporaryId: identity } });
       }
     }
 

@@ -16,6 +16,7 @@ const TasksPage = lazy(() => import('../pages/Tasks/TaskPage'));
 const WorksPage = lazy(() => import('../pages/Works/WorksPage'));
 const RiskPage = lazy(() => import('../pages/Risk/RiskPage'));
 const ProfilePage = lazy(() => import('../pages/Profile/ProfilePage'));
+const FocusPage = lazy(() => import('../pages/Focus/FocusPage'));
 
 const PageLoader = () => (
     <div style={{
@@ -53,6 +54,12 @@ export const router = createBrowserRouter([
     {
         element: <ProtectedRoute />,
         children: [
+            {
+                // Mode focus : hors AppLayout volontairement — aucune
+                // sidebar ni topbar, immersion totale anti-distraction.
+                path: '/focus/:taskId',
+                element: <Suspense fallback={<PageLoader />}><FocusPage /></Suspense>,
+            },
             {
                 // AppLayout enveloppe toutes les pages protégées
                 // Il affiche la sidebar + topbar

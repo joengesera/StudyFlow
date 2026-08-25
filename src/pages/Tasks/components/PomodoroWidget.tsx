@@ -1,4 +1,5 @@
 import { usePomodoro } from '../../../hooks/usePomodoro';
+import { TimerRing } from '../../../components/TimerRing';
 
 interface PomodoroWidgetProps {
   taskId: string | null;
@@ -35,24 +36,8 @@ export const PomodoroWidget = ({ taskId, taskTitle }: PomodoroWidgetProps) => {
         )}
       </div>
 
-      <div className="relative w-32 h-32 my-2">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="5" className="text-outline-variant" />
-          <circle
-            cx="50" cy="50" r="44"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="5"
-            strokeDasharray={`${2 * Math.PI * 44}`}
-            strokeDashoffset={`${2 * Math.PI * 44 * (1 - progress / 100)}`}
-            strokeLinecap="round"
-            className={phase === 'work' ? 'text-primary' : 'var(--color-tertiary)'}
-            style={{ transition: 'stroke-dashoffset 1s linear' }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-display-lg font-display-lg text-on-surface tabular-nums tracking-tight">{formatted}</span>
-        </div>
+      <div className="my-2">
+        <TimerRing progress={progress} formatted={formatted} phase={phase} size={128} />
       </div>
 
       <div className="text-label-sm font-label-sm text-on-surface-variant">

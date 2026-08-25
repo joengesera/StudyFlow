@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useSyncStore } from '../stores/syncStore';
+import { useNetworkSync } from '../hooks/useNetworkSync';
+import { SyncStatus } from '../components/SyncStatus/SyncStatus';
+import { SmartCreateModal } from '../components/smart/SmartCreateModal';
+import { ToastHost } from '../components/ToastHost';
+import { NotificationCenter } from '../components/NotificationCenter/NotificationCenter';
+import { useLocalNotifications } from '../hooks/useLocalNotifications';
 import logo from '@/assets/Fichier1.svg';
 
 const navItems = [
@@ -21,9 +27,17 @@ const bottomNavItems = [
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [smartCreateOpen, setSmartCreateOpen] = useState(false);
   const { logout } = useAuth();
   const location = useLocation();
   const isSyncReady = useSyncStore((state) => state.isReady);
+
+  // Point de montage unique du moteur de sync : vide la file offline
+  // au retour du réseau et alimente l'indicateur de statut.
+  useNetworkSync();
+
+  // Moteur de notifications locales (détecteurs + badge + deep-links SW).
+  useLocalNotifications();
 
   useEffect(() => {
     if (window.innerWidth < 768) {
@@ -168,13 +182,9 @@ export default function AppLayout() {
             </button>
             <h2 className="text-headline-sm font-headline-sm text-on-surface hidden md:block">{getPageTitle(activePath)}</h2>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              className="text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-primary-fixed-dim transition-colors p-2 rounded-full hover:bg-surface-container-low"
-              aria-label="Notifications"
-            >
-              <span className="material-symbols-outlined" data-icon="notifications">notifications</span>
-            </button>
+          <div className="flex items-center gap-2 md:gap-4">
+            <SyncStatus />
+            <NotificationCenter />
             <div className="w-8 h-8 rounded-full bg-surface-container border border-outline-variant overflow-hidden flex items-center justify-center">
               <img
                 alt="User Profile"
@@ -192,6 +202,19 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* FAB création intelligente — icône seule en mobile, étendu en desktop */}
+      <button
+        onClick={() => setSmartCreateOpen(true)}
+        aria-label="Création intelligente de tâche ou d'événement"
+        className="fixed z-40 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))] h-14 w-14 md:h-12 md:w-auto md:px-5 rounded-full bg-primary text-on-primary shadow-lg shadow-black/25 flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-xl active:scale-95"
+      >
+        <span className="material-symbols-outlined text-[24px]">auto_awesome</span>
+        <span className="hidden md:inline text-label-lg font-label-lg font-semibold">Créer</span>
+      </button>
+
+      <SmartCreateModal open={smartCreateOpen} onClose={() => setSmartCreateOpen(false)} />
+      <ToastHost />
     </div>
   );
 }

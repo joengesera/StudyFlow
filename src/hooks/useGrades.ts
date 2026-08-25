@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gradesApi } from '../api/grade.api';
-import { useSyncStore } from '../stores/syncStore';
+import { insertEntityInCaches, isOfflineMutationResult, removeEntityFromCaches } from '../sync/offlineCaches';
 import type { Grade } from '../types';
 
 export const gradeKeys = {
@@ -10,25 +10,9 @@ export const gradeKeys = {
 };
 
 export const useGrades = (courseId?: string) => {
-    const setCacheGrades = useSyncStore((s) => s.setCacheGrades);
-    const cachedGrades = useSyncStore((s) => s.cache.grades);
-
     return useQuery({
         queryKey: courseId ? gradeKeys.byCourse(courseId) : gradeKeys.all,
-        queryFn: async () => {
-            const grades = await gradesApi.getAll(courseId);
-            // Persiste toutes les notes dans le cache local (uniquement pour les requêtes globales)
-            if (!courseId) {
-                setCacheGrades(grades);
-            }
-            return grades;
-        },
-        // Fallback sur le cache local (filtré par courseId si besoin)
-        placeholderData: !courseId && cachedGrades.length > 0
-            ? cachedGrades
-            : courseId && cachedGrades.length > 0
-                ? cachedGrades.filter((g) => g.courseId === courseId)
-                : undefined,
+        queryFn: () => gradesApi.getAll(courseId),
     });
 };
 
@@ -40,13 +24,38 @@ export const useCourseAverage = (courseId: string) => {
     });
 };
 
+const buildOptimisticGrade = (id: string, payload: Partial<Grade>): Grade => ({
+    id,
+    name: payload.name ?? '',
+    score: payload.score ?? 0,
+    maxScore: payload.maxScore ?? 20,
+    percentage: payload.percentage ?? null,
+    weight: payload.weight ?? null,
+    workTypeLabel: payload.workTypeLabel ?? null,
+    workId: payload.workId ?? null,
+    date: payload.date ?? null,
+    comment: payload.comment ?? null,
+    courseId: payload.courseId ?? '',
+    workTypeId: payload.workTypeId ?? null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+});
+
 export const useCreateGrade = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: gradesApi.create,
-        onSuccess: (_data, variables) => {
-            queryClient.invalidateQueries({ queryKey: gradeKeys.all });
+        mutationFn: (payload: Partial<Grade>) => {
+            const localId = payload.id ?? crypto.randomUUID();
+            if (payload.courseId) {
+                insertEntityInCaches(queryClient, 'Grade', buildOptimisticGrade(localId, payload));
+            }
+            return gradesApi.create({ ...payload, id: localId });
+        },
+        onSuccess: (created, variables) => {
+            if (!isOfflineMutationResult(created)) {
+                queryClient.invalidateQueries({ queryKey: gradeKeys.all });
+            }
             if (variables.courseId) {
                 queryClient.invalidateQueries({
                     queryKey: gradeKeys.byCourse(variables.courseId),
@@ -75,7 +84,10 @@ export const useDeleteGrade = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: gradesApi.delete,
+        mutationFn: (id: string) => {
+            removeEntityFromCaches(queryClient, 'Grade', id);
+            return gradesApi.delete(id);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: gradeKeys.all });
         },

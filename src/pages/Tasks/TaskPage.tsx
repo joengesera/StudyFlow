@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DndContext,
   type DragEndEvent,
@@ -20,6 +21,7 @@ import { TaskModal } from './components/TaskModal';
 import { columns, type Column } from './taskShared';
 
 export default function TasksPage() {
+  const navigate = useNavigate();
   const { data: tasks = [], isLoading } = useTasks();
   const { data: courses = [] } = useCourses();
   const { data: events = [] } = useEvents();
@@ -85,6 +87,20 @@ export default function TasksPage() {
       .sort((a, b) => a.position - b.position);
 
   const activeDragTask = activeId ? tasks.find((t) => t.id === activeId) : null;
+
+  // Entrée en mode focus : single-WIP strict (auto-revert des autres
+  // tâches IN_PROGRESS) puis bascule IN_PROGRESS et navigation.
+  const startFocus = (task: Task) => {
+    if (task.status === 'COMPLETED' || task.status === 'CANCELED') return;
+    tasks
+      .filter((t) => t.id !== task.id && t.status === 'IN_PROGRESS' && !t.isDeleted)
+      .forEach((t) => updateTask({ id: t.id, payload: { status: 'PENDING', startedAt: null } }));
+    if (task.status !== 'IN_PROGRESS') {
+      updateTask({ id: task.id, payload: { status: 'IN_PROGRESS', startedAt: new Date().toISOString() } });
+    }
+    navigate(`/focus/${task.id}`);
+  };
+
 
   const handleDragStart = (event: DragStartEvent) => { setActiveId(String(event.active.id)); };
   const handleDragEnd = (event: DragEndEvent) => {
@@ -168,6 +184,8 @@ export default function TasksPage() {
                 tasks={tasksByColumn(col.key)}
                 courses={courseDict}
                 onSelect={(task) => { setSelectedTask(task); setPomodoroTask(task); setShowModal(true); }}
+                onStartFocus={startFocus}
+                onDelete={(id) => deleteTask(id)}
                 selectedTaskId={selectedTask?.id ?? pomodoroTask?.id ?? null}
                 onAddTask={(status) => createTask({ title: 'Nouvelle tâche', status, priority: 'MEDIUM' })}
                 isCollapsed={!!collapsedColumns[col.key]}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '../../../types';
@@ -7,6 +8,8 @@ interface TaskCardProps {
   task: Task;
   courseName?: string;
   onSelect: (task: Task) => void;
+  onStartFocus: (task: Task) => void;
+  onDelete: (id: string) => void;
   isSelected: boolean;
 }
 
@@ -24,7 +27,7 @@ const priorityBadges = {
   CRITICAL: { label: 'Critique', bg: 'var(--color-error-container)', text: 'var(--color-on-error-container)' },
 };
 
-export const TaskCard = ({ task, courseName, onSelect, isSelected }: TaskCardProps) => {
+export const TaskCard = ({ task, courseName, onSelect, onStartFocus, onDelete, isSelected }: TaskCardProps) => {
   const {
     attributes,
     listeners,
@@ -32,6 +35,8 @@ export const TaskCard = ({ task, courseName, onSelect, isSelected }: TaskCardPro
     transform,
     isDragging,
   } = useSortable({ id: task.id });
+
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const isCompleted = task.status === 'COMPLETED';
   const statusDot = statusColors[task.status];
@@ -51,7 +56,7 @@ export const TaskCard = ({ task, courseName, onSelect, isSelected }: TaskCardPro
       {...listeners}
       onClick={() => onSelect(task)}
       className={`
-        card card-padded mb-3 cursor-grab active:cursor-grabbing select-none transition-shadow hover:shadow-md
+        card card-padded mb-3 cursor-grab active:cursor-grabbing select-none transition-shadow hover:shadow-md relative
         ${isSelected ? 'ring-2 ring-primary ring-offset-2 border-transparent' : 'border-outline-variant'}
         ${isDragging ? 'rotate-1 shadow-xl z-50' : ''}
       `}
@@ -69,12 +74,62 @@ export const TaskCard = ({ task, courseName, onSelect, isSelected }: TaskCardPro
             {task.title}
           </div>
         </div>
-        {task.timeSpentMinutes > 0 && (
-          <div className="text-label-sm font-label-sm text-on-surface-variant shrink-0 whitespace-nowrap ml-2 mt-1 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[16px]">schedule</span>
-            {task.timeSpentMinutes} min
+        <div className="flex items-center gap-1 shrink-0 ml-2 mt-1">
+          {task.timeSpentMinutes > 0 && (
+            <div className="text-label-sm font-label-sm text-on-surface-variant whitespace-nowrap flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">schedule</span>
+              {task.timeSpentMinutes} min
+            </div>
+          )}
+          {/* Zone hors drag & drop : stopPropagation sur pointerdown pour
+              ne pas déclencher le PointerSensor du DndContext. */}
+          <div
+            className="relative"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-label="Options de la tâche"
+              aria-expanded={menuOpen}
+              className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">more_vert</span>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                <div role="menu" className="absolute right-0 top-9 z-50 card py-1 w-48 shadow-lg">
+                  <button
+                    role="menuitem"
+                    disabled={isCompleted}
+                    onClick={() => { setMenuOpen(false); onStartFocus(task); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-label-sm font-label-sm text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                    Faire maintenant
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); onSelect(task); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-label-sm font-label-sm text-on-surface hover:bg-surface-container-low transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                    Modifier
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); onDelete(task.id); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-label-sm font-label-sm text-error hover:bg-error-container/30 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    Supprimer
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-2 flex-wrap">

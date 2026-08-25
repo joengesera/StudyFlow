@@ -9,6 +9,8 @@ interface KanbanColumnProps {
   tasks: Task[];
   courses: Record<string, string>;
   onSelect: (task: Task) => void;
+  onStartFocus: (task: Task) => void;
+  onDelete: (id: string) => void;
   selectedTaskId: string | null;
   onAddTask: (status: Column) => void;
   isCollapsed: boolean;
@@ -20,6 +22,8 @@ export const KanbanColumn = ({
   tasks,
   courses,
   onSelect,
+  onStartFocus,
+  onDelete,
   selectedTaskId,
   onAddTask,
   isCollapsed,
@@ -67,6 +71,8 @@ export const KanbanColumn = ({
                 task={task}
                 courseName={task.courseId ? courses[task.courseId] : undefined}
                 onSelect={onSelect}
+                onStartFocus={onStartFocus}
+                onDelete={onDelete}
                 isSelected={selectedTaskId === task.id}
               />
             ))}

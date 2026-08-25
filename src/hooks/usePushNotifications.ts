@@ -23,7 +23,8 @@ interface UsePushNotificationsReturn {
     sendTestNotification: () => Promise<void>;
 }
 
-const STORAGE_KEY = 'studyflow-notification-preferences';
+export const NOTIFICATION_PREFERENCES_STORAGE_KEY = 'studyflow-notification-preferences';
+const STORAGE_KEY = NOTIFICATION_PREFERENCES_STORAGE_KEY;
 const SHOULD_SYNC_WITH_BACKEND = import.meta.env.VITE_ENABLE_PUSH_BACKEND_SYNC === 'true';
 const VAPID_PUBLIC_KEY = (import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY ?? '').trim();
 

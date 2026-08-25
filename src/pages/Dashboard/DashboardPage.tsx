@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '../../stores/authStore';
-import { useTasks } from '../../hooks/useTasks';
+import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useEvents } from '../../hooks/useEvents';
 import { useCourses } from '../../hooks/useCourses';
 import { useGrades } from '../../hooks/useGrades';
@@ -53,9 +53,10 @@ const TodayEvent = ({ event, courseName }: TodayEventProps) => {
 interface TaskItemProps {
   task: Task;
   courseName?: string;
+  onToggle: (task: Task) => void;
 }
 
-const TaskItem = ({ task, courseName }: TaskItemProps) => {
+const TaskItem = ({ task, courseName, onToggle }: TaskItemProps) => {
   const isCompleted = task.status === 'COMPLETED';
   const isUrgent = task.priority === 'HIGH' || task.priority === 'CRITICAL';
   const isLate = task.dueDate && new Date(task.dueDate) < new Date() && !isCompleted;
@@ -73,10 +74,9 @@ const TaskItem = ({ task, courseName }: TaskItemProps) => {
     <div className={`p-card-padding hover:bg-surface-container-low transition-colors flex items-center justify-between ${isCompleted ? 'opacity-80' : ''}`}>
       <div className="flex items-center gap-4">
         <button
-          onClick={() => {}}
-          className={`w-4 h-4 rounded-sm border flex-shrink-0 cursor-pointer ${isCompleted ? 'bg-primary border-primary' : 'border-outline'}`}
+          onClick={() => onToggle(task)}
+          className={`w-4 h-4 rounded-sm border flex-shrink-0 cursor-pointer ${isCompleted ? 'bg-primary border-primary' : 'border-outline hover:border-primary'}`}
           aria-label={isCompleted ? 'Marquer comme à faire' : 'Marquer comme terminé'}
-          disabled
         >
           {isCompleted && (
             <span className="material-symbols-outlined text-on-primary text-[16px]">check</span>
@@ -113,6 +113,15 @@ export default function DashboardPage() {
   const { data: courses = [] } = useCourses();
   const { data: grades = [] } = useGrades();
   const { overallAverage, riskCoursesCount } = useDashboardStats(grades, courses);
+  const updateTask = useUpdateTask();
+
+  const handleToggleTask = (task: Task) => {
+    if (updateTask.isPending) return;
+    updateTask.mutate({
+      id: task.id,
+      payload: { status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED' },
+    });
+  };
 
   const courseDict = useMemo(
     () =>
@@ -214,6 +223,7 @@ export default function DashboardPage() {
                     key={task.id}
                     task={task}
                     courseName={task.courseId ? courseDict[task.courseId] : undefined}
+                    onToggle={handleToggleTask}
                   />
                 ))
               )}

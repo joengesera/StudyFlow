@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSyncStore } from '../stores/syncStore';
+import { useSyncStore, type SyncAction } from '../stores/syncStore';
 import { apiClient } from '../api/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { taskKeys } from '../hooks/useTasks';
+import { remapLocalIdInCaches } from '../sync/offlineCaches';
 
 interface SyncResponse {
   data?: {
@@ -24,11 +24,11 @@ const MAX_RETRIES = 3;
 
 export function useNetworkSync() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const retryCountRef = useRef<Record<string, number>>({});
   const isProcessingRef = useRef(false);
   const queryClient = useQueryClient();
 
-  const { queue, isSyncing, setSyncing, removeAction } = useSyncStore();
+  const { queue, failedActions, isSyncing, setSyncing, removeAction, markFailed, clearFailed, bumpAttempts } =
+    useSyncStore();
 
   const processQueue = useCallback(async () => {
     if (!navigator.onLine) return;
@@ -44,36 +44,27 @@ export function useNetworkSync() {
       if (!navigator.onLine) break;
 
       try {
+        // Idempotency-Key : permet au backend de dédupliquer si l'action
+        // avait déjà été appliquée (ex. timeout réseau après application).
         const response = await apiClient.post<SyncResponse>('/sync/push', action, {
           _isSync: true,
-        } as never);
+          headers: { 'Idempotency-Key': action.id },
+        });
 
         const result = response.data?.data;
 
-        if (result?.entity?.id && action.data?.localId) {
-          const localId = action.data.localId;
-          const serverId = result.entity.id;
-
-          queryClient.setQueryData(taskKeys.all, (old: unknown[]) =>
-            old?.map((t) => (t && typeof t === 'object' && 'id' in t && t.id === localId
-              ? { ...t, id: serverId, localId: undefined }
-              : t)) ?? []
-          );
-          queryClient.setQueryData(taskKeys.board, (old: unknown[]) =>
-            old?.map((t) => (t && typeof t === 'object' && 'id' in t && t.id === localId
-              ? { ...t, id: serverId, localId: undefined }
-              : t)) ?? []
-          );
+        if (result?.entity?.id && action.localId) {
+          remapLocalIdInCaches(queryClient, action.entity, action.localId, result.entity.id);
         }
 
         removeAction(action.id);
-        delete retryCountRef.current[action.id];
+        clearFailed(action.id);
 
       } catch (error: unknown) {
         const err = error as ApiError;
-        const retries = (retryCountRef.current[action.id] ?? 0) + 1;
-        retryCountRef.current[action.id] = retries;
 
+        // Réseau toujours indisponible → on stoppe, on retentera plus tard
+        // sans compter d'échec contre l'action.
         if (
           !navigator.onLine ||
           err.message === 'Network Error' ||
@@ -82,19 +73,19 @@ export function useNetworkSync() {
           break;
         }
 
+        // Rejet définitif du serveur (validation, permissions…) → dead-letter.
         if (err.response?.status && err.response.status >= 400 && err.response.status < 500) {
-          console.warn('[sync] Action rejetée (4xx), supprimée de la file :', action, err.response.status);
-          removeAction(action.id);
-          delete retryCountRef.current[action.id];
+          console.warn('[sync] Action rejetée (4xx), mise en échec :', action, err.response.status);
+          markFailed(action.id, `Rejetée par le serveur (${err.response.status})`);
           continue;
         }
 
-        if (retries >= MAX_RETRIES) {
+        // Erreur transitoire (5xx…) → retry limité, compteur persisté.
+        const attempts = bumpAttempts(action.id);
+        if (attempts >= MAX_RETRIES) {
           console.error(`[sync] Action abandonnée après ${MAX_RETRIES} tentatives :`, action);
-          removeAction(action.id);
-          delete retryCountRef.current[action.id];
+          markFailed(action.id, `Échec après ${MAX_RETRIES} tentatives`);
         } else {
-          console.warn(`[sync] Tentative ${retries}/${MAX_RETRIES} échouée pour :`, action.id);
           break;
         }
       }
@@ -102,12 +93,12 @@ export function useNetworkSync() {
 
     setSyncing(false);
     isProcessingRef.current = false;
-  }, [queryClient, removeAction, setSyncing]);
+  }, [bumpAttempts, clearFailed, markFailed, queryClient, removeAction, setSyncing]);
 
   useEffect(() => {
-    const handleOnline = async () => {
+    const handleOnline = () => {
       setIsOnline(true);
-      await processQueue();
+      void processQueue();
     };
 
     const handleOffline = () => {
@@ -117,15 +108,47 @@ export function useNetworkSync() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    if (navigator.onLine && queue.length > 0 && !isProcessingRef.current) {
+    // Le service worker délègue la vidange aux onglets ouverts quand le
+    // drain direct en arrière-plan n'est pas possible.
+    const handleSwMessage = (event: MessageEvent) => {
+      if ((event.data as { type?: string } | null)?.type === 'TRIGGER_SYNC') {
+        void processQueue();
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSwMessage);
+
+    if (navigator.onLine && useSyncStore.getState().queue.length > 0 && !isProcessingRef.current) {
       processQueue();
     }
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      navigator.serviceWorker?.removeEventListener('message', handleSwMessage);
     };
-  }, [queue.length, processQueue]);
+  }, [processQueue]);
 
-  return { isOnline, isSyncing, queueCount: queue.length };
+  const retryAllFailed = useCallback(() => {
+    useSyncStore.getState().retryAllFailed();
+    void processQueue();
+  }, [processQueue]);
+
+  return {
+    isOnline,
+    isSyncing,
+    queueCount: queue.length,
+    failedActions,
+    retryAction: (action: SyncAction | string) => {
+      const id = typeof action === 'string' ? action : action.id;
+      useSyncStore.getState().retryFailed(id);
+      void processQueue();
+    },
+    discardAction: (action: SyncAction | string) => {
+      const id = typeof action === 'string' ? action : action.id;
+      useSyncStore.getState().discardFailed(id);
+    },
+    retryAllFailed,
+    discardAllFailed: () => useSyncStore.getState().discardAllFailed(),
+    triggerSync: processQueue,
+  };
 }

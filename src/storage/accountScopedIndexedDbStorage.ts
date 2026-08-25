@@ -1,5 +1,10 @@
 import type { StateStorage } from 'zustand/middleware';
 
+// NOTE sécurité : le chiffrement AES-GCM n'est qu'une obfuscation — la clé
+// repose dans la même IndexedDB que les données chiffrées. L'objectif est
+// d'éviter la lecture casual des données en clair, pas de résister à un
+// attaquant ayant un accès complet au stockage local du navigateur.
+
 type ScopeResolver = () => string;
 
 interface PersistedRecord {
@@ -189,8 +194,7 @@ const decryptValue = async (scope: string, rawValue: string): Promise<string> =>
   }
 };
 
-export const createAccountScopedIndexedDbStorage = (resolveScope: ScopeResolver): StateStorage => ({
-  getItem: async (key) => {
+export const createAccountScopedIndexedDbStorage = (resolveScope: ScopeResolver): StateStorage => ({  getItem: async (key) => {
     const scope = resolveScope();
     const db = await openDatabase();
     const tx = db.transaction(STATE_STORE, 'readonly');
@@ -233,4 +237,22 @@ export const createAccountScopedIndexedDbStorage = (resolveScope: ScopeResolver)
     await promisifyTransaction(tx);
   },
 });
+
+// Indice (en clair) du scope actif, lu par le service worker pour savoir
+// quelle file/chiffrement utiliser lors d'un drain en Background Sync.
+export const ACTIVE_SCOPE_HINT_KEY = '__active_scope__';
+
+export const writeActiveScopeHint = async (scope: string): Promise<void> => {
+  if (typeof indexedDB === 'undefined') return;
+
+  try {
+    const db = await openDatabase();
+    const tx = db.transaction(SECRET_STORE, 'readwrite');
+    const store = tx.objectStore(SECRET_STORE);
+    store.put({ scope: ACTIVE_SCOPE_HINT_KEY, secretB64: scope, createdAt: Date.now() });
+    await promisifyTransaction(tx);
+  } catch {
+    // best effort : le SW retombera sur la délégation aux clients ouverts
+  }
+};
 

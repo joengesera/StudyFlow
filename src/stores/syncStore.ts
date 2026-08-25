@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { Course, Event, Grade, Task } from '../types';
-import { createAccountScopedIndexedDbStorage } from '../storage/accountScopedIndexedDbStorage';
+import { persistQueryClientSave } from '@tanstack/react-query-persist-client';
+import { createAccountScopedIndexedDbStorage, writeActiveScopeHint } from '../storage/accountScopedIndexedDbStorage';
+import { getInitialAccountScope, GUEST_SCOPE, hashScope } from '../utils/accountScope';
+import { queryClient, queryPersister, setActiveQueryScope } from '../lib/queryClient';
+import { switchNotificationStoreScope } from './notificationStore';
 
 export interface SyncAction {
   id: string;
@@ -11,160 +14,181 @@ export interface SyncAction {
   deviceId: string;
   timestamp: number;
   localId?: string;
+  attempts?: number;
 }
 
-interface EntityCache {
-  tasks: Task[];
-  events: Event[];
-  courses: Course[];
-  grades: Grade[];
-  lastUpdated: Record<string, number>;
+export interface FailedSyncAction {
+  action: SyncAction;
+  message: string;
+  at: number;
 }
 
 interface SyncState {
   queue: SyncAction[];
+  failedActions: FailedSyncAction[];
   isSyncing: boolean;
   isReady: boolean;
-  cache: EntityCache;
 
-  enqueueAction: (action: Omit<SyncAction, 'id' | 'timestamp'>) => void;
+  enqueueAction: (action: Omit<SyncAction, 'id' | 'timestamp' | 'attempts'>) => void;
   removeAction: (id: string) => void;
+  bumpAttempts: (id: string) => number;
+  markFailed: (id: string, message: string) => void;
+  clearFailed: (actionId: string) => void;
+  retryFailed: (actionId: string) => void;
+  retryAllFailed: () => void;
+  discardFailed: (actionId: string) => void;
+  discardAllFailed: () => void;
   clearQueue: () => void;
   setSyncing: (isSyncing: boolean) => void;
   setReady: (isReady: boolean) => void;
-
-  setCacheTasks: (tasks: Task[]) => void;
-  setCacheEvents: (events: Event[]) => void;
-  setCacheCourses: (courses: Course[]) => void;
-  setCacheGrades: (grades: Grade[]) => void;
-  updateCacheTask: (id: string, update: Partial<Task>) => void;
-  clearCache: () => void;
 }
 
-const AUTH_STORAGE_KEY = 'auth-storage';
-const GUEST_SCOPE = 'guest';
-
-const emptyCache: EntityCache = {
-  tasks: [],
-  events: [],
-  courses: [],
-  grades: [],
-  lastUpdated: {},
+const emptyQueueState = {
+  queue: [] as SyncAction[],
+  failedActions: [] as FailedSyncAction[],
 };
 
-const getPersistedAccountId = (): string | null => {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as { state?: { user?: { id?: string | null } | null } };
-    return parsed?.state?.user?.id ?? null;
-  } catch {
-    return null;
-  }
+// Cible métier d'une action : l'id de l'entité visée (payload.id ou localId).
+const targetIdOf = (a: SyncAction): string | undefined => {
+  const d = a.data as { id?: unknown } | undefined | null;
+  const id = typeof d?.id === 'string' ? d.id : undefined;
+  return id ?? a.localId;
 };
 
-const hashScope = (value: string): string => {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-  }
-  return (hash >>> 0).toString(16);
-};
-
-const toAccountScope = (accountId: string | null) =>
-  accountId ? `user-${hashScope(accountId)}` : GUEST_SCOPE;
-
-let activeSyncScope = toAccountScope(getPersistedAccountId());
+let activeSyncScope = getInitialAccountScope();
+void writeActiveScopeHint(activeSyncScope);
 
 const indexedDbStorage = createAccountScopedIndexedDbStorage(() => activeSyncScope);
 
 export const useSyncStore = create<SyncState>()(
   persist(
-    (set) => ({
-      queue: [],
+    (set, get) => ({
+      ...emptyQueueState,
       isSyncing: false,
       isReady: false,
-      cache: emptyCache,
 
+      // Coalescing : on évite d'empiler des mutations redondantes pour une
+      // même entité — UPDATE écrase le précédent / fusionne dans le CREATE,
+      // DELETE suivant un CREATE non synchronisé annule tout (l'entité
+      // n'existe pas encore côté serveur).
       enqueueAction: (action) =>
-        set((state) => ({
-          queue: [
-            ...state.queue,
-            {
-              ...action,
-              id: crypto.randomUUID(),
-              timestamp: Date.now(),
-            },
-          ],
-        })),
+        set((state) => {
+          const incoming: SyncAction = {
+            ...action,
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+            attempts: 0,
+          };
+          const target = targetIdOf(incoming);
+          const sameTarget = (a: SyncAction) =>
+            a.entity === incoming.entity && a.type !== 'DELETE' && target !== undefined && targetIdOf(a) === target;
+
+          if (incoming.type === 'DELETE') {
+            const hadCreate = state.queue.some((a) => sameTarget(a) && a.type === 'CREATE');
+            const remaining = state.queue.filter((a) => !sameTarget(a));
+            // Entité jamais créée côté serveur → inutile de pousser le DELETE.
+            if (hadCreate) return { queue: remaining };
+            return { queue: [...remaining, incoming] };
+          }
+
+          if (incoming.type === 'UPDATE') {
+            const queue = [...state.queue];
+            const idxCreate = queue.findIndex((a) => sameTarget(a) && a.type === 'CREATE');
+            if (idxCreate >= 0) {
+              const created = queue[idxCreate];
+              queue[idxCreate] = {
+                ...created,
+                data: { ...created.data, ...incoming.data },
+                timestamp: incoming.timestamp,
+              };
+              return { queue };
+            }
+            const idxUpdate = queue.findIndex((a) => sameTarget(a) && a.type === 'UPDATE');
+            if (idxUpdate >= 0) {
+              const prev = queue[idxUpdate];
+              queue[idxUpdate] = {
+                ...prev,
+                data: { ...prev.data, ...incoming.data },
+                timestamp: incoming.timestamp,
+              };
+              return { queue };
+            }
+          }
+
+          return { queue: [...state.queue, incoming] };
+        }),
 
       removeAction: (id) =>
         set((state) => ({
           queue: state.queue.filter((a) => a.id !== id),
         })),
 
+      bumpAttempts: (id) => {
+        const current = get().queue.find((a) => a.id === id);
+        const next = (current?.attempts ?? 0) + 1;
+        set((state) => ({
+          queue: state.queue.map((a) => (a.id === id ? { ...a, attempts: next } : a)),
+        }));
+        return next;
+      },
+
+      // Dead-letter : au lieu de supprimer silencieusement une action en
+      // échec définitif, on la met de côté avec son erreur. L'utilisateur
+      // peut la réessayer ou l'abandonner depuis l'UI de sync.
+      markFailed: (id, message) =>
+        set((state) => {
+          const action = state.queue.find((a) => a.id === id);
+          if (!action) return {};
+          return {
+            queue: state.queue.filter((a) => a.id !== id),
+            failedActions: [
+              { action, message, at: Date.now() },
+              ...state.failedActions.filter((f) => f.action.id !== id),
+            ],
+          };
+        }),
+
+      clearFailed: (actionId) =>
+        set((state) => ({
+          failedActions: state.failedActions.filter((f) => f.action.id !== actionId),
+        })),
+
+      retryFailed: (actionId) =>
+        set((state) => {
+          const entry = state.failedActions.find((f) => f.action.id === actionId);
+          if (!entry) return {};
+          return {
+            failedActions: state.failedActions.filter((f) => f.action.id !== actionId),
+            queue: [...state.queue, { ...entry.action, attempts: 0 }],
+          };
+        }),
+
+      retryAllFailed: () =>
+        set((state) => ({
+          failedActions: [],
+          queue: [
+            ...state.queue,
+            ...state.failedActions.map((f) => ({ ...f.action, attempts: 0 })),
+          ],
+        })),
+
+      discardFailed: (actionId) =>
+        set((state) => ({
+          failedActions: state.failedActions.filter((f) => f.action.id !== actionId),
+        })),
+
+      discardAllFailed: () => set({ failedActions: [] }),
+
       clearQueue: () => set({ queue: [] }),
       setSyncing: (isSyncing) => set({ isSyncing }),
       setReady: (isReady) => set({ isReady }),
-
-      setCacheTasks: (tasks) =>
-        set((state) => ({
-          cache: {
-            ...state.cache,
-            tasks,
-            lastUpdated: { ...state.cache.lastUpdated, tasks: Date.now() },
-          },
-        })),
-
-      setCacheEvents: (events) =>
-        set((state) => ({
-          cache: {
-            ...state.cache,
-            events,
-            lastUpdated: { ...state.cache.lastUpdated, events: Date.now() },
-          },
-        })),
-
-      setCacheCourses: (courses) =>
-        set((state) => ({
-          cache: {
-            ...state.cache,
-            courses,
-            lastUpdated: { ...state.cache.lastUpdated, courses: Date.now() },
-          },
-        })),
-
-      setCacheGrades: (grades) =>
-        set((state) => ({
-          cache: {
-            ...state.cache,
-            grades,
-            lastUpdated: { ...state.cache.lastUpdated, grades: Date.now() },
-          },
-        })),
-
-      updateCacheTask: (id, update) =>
-        set((state) => ({
-          cache: {
-            ...state.cache,
-            tasks: state.cache.tasks.map((task) =>
-              task.id === id ? { ...task, ...update } : task,
-            ),
-          },
-        })),
-
-      clearCache: () => set({ cache: emptyCache }),
     }),
     {
       name: 'sync-storage',
       storage: createJSONStorage(() => indexedDbStorage),
       partialize: (state) => ({
         queue: state.queue,
-        cache: state.cache,
+        failedActions: state.failedActions,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setReady(true);
@@ -176,17 +200,20 @@ export const useSyncStore = create<SyncState>()(
 export const getActiveSyncScope = () => activeSyncScope;
 
 export const setSyncAccountScope = async (accountId: string | null) => {
-  const nextScope = toAccountScope(accountId);
+  const nextScope = accountId ? `user-${hashScope(accountId)}` : GUEST_SCOPE;
 
   if (nextScope === activeSyncScope && useSyncStore.getState().isReady) {
     return;
   }
 
+  // Flush du cache requêtes SOUS l'ancien scope avant de basculer.
+  await persistQueryClientSave({ queryClient, persister: queryPersister }).catch(() => undefined);
+
   activeSyncScope = nextScope;
+  setActiveQueryScope(nextScope);
 
   useSyncStore.setState({
-    queue: [],
-    cache: emptyCache,
+    ...emptyQueueState,
     isSyncing: false,
     isReady: false,
   });
@@ -197,4 +224,16 @@ export const setSyncAccountScope = async (accountId: string | null) => {
     console.error('[sync-store] account scope rehydrate failed', error);
     useSyncStore.getState().setReady(true);
   }
+
+  // L'historique de notifications vit dans le même stockage scopé : on
+  // recharge celui du nouveau compte (le scope actif est déjà basculé).
+  try {
+    await switchNotificationStoreScope();
+  } catch (error) {
+    console.error('[sync-store] notification store scope rehydrate failed', error);
+  }
+
+  // Le login suppose le réseau : le cache requêtes se rechargera depuis
+  // le serveur. On repart de zéro pour éviter tout mélange entre comptes.
+  queryClient.clear();
 };
