@@ -9,6 +9,7 @@ export const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 10,
       gcTime: 1000 * 60 * 30,
       retry: 1,
+      networkMode: 'offlineFirst',
       refetchOnWindowFocus: 'always',
       refetchOnReconnect: 'always',
       refetchOnMount: 'always',
@@ -28,9 +29,31 @@ const scopedStorage = createAccountScopedIndexedDbStorage(() => activeScope);
 // Adaptation des types zustand (StateStorage) vers AsyncStorage attendu
 // par le persister TanStack.
 const queryCacheStorage = {
-  getItem: async (key: string) => scopedStorage.getItem(key),
+  getItem: async (key: string) => {
+    try {
+      const value = await scopedStorage.getItem(key);
+      console.info('[query-cache] get', key, value ? `OK (${value.length} chars)` : 'MISS');
+      return value;
+    } catch (error) {
+      console.error('[query-cache] get FAILED', key, error);
+      return null;
+    }
+  },
   setItem: async (key: string, value: string) => {
-    await scopedStorage.setItem(key, value);
+    try {
+      await scopedStorage.setItem(key, value);
+      // Auto-test lecture/écriture : détecte toute corruption silencieuse
+      // (chiffrement défaillant, transaction avortée…). Le déchiffrement
+      // restitue exactement la valeur d'origine.
+      const back = await scopedStorage.getItem(key);
+      if (back !== value) {
+        console.error('[query-cache] CORRUPTION: relecture != écriture', key);
+      } else {
+        console.info('[query-cache] persisted', key, `(${value.length} chars)`);
+      }
+    } catch (error) {
+      console.error('[query-cache] set FAILED', key, error);
+    }
   },
   removeItem: async (key: string) => {
     await scopedStorage.removeItem(key);

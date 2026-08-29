@@ -1,35 +1,43 @@
 import { useEffect, useState } from 'react';
 
-export type VisualComfortMode = 'standard' | 'comfortable' | 'high';
+export const MIN_VISUAL_SCALE = 100;
+export const MAX_VISUAL_SCALE = 200;
+export const DEFAULT_VISUAL_SCALE = 100;
 
 const STORAGE_KEY = 'studyflow-visual-comfort';
 
-const isVisualComfortMode = (value: string | null): value is VisualComfortMode =>
-    value === 'standard' || value === 'comfortable' || value === 'high';
+const boundsVisualScale = (value: number): number =>
+    Math.min(MAX_VISUAL_SCALE, Math.max(MIN_VISUAL_SCALE, Math.round(value)));
 
-const readVisualComfort = (): VisualComfortMode => {
-    if (typeof window === 'undefined') return 'standard';
+const readVisualComfort = (): number => {
+    if (typeof window === 'undefined') return DEFAULT_VISUAL_SCALE;
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return isVisualComfortMode(stored) ? stored : 'standard';
+    // Compat rétro : anciens modes 'standard' | 'comfortable' | 'high'.
+    if (stored === 'standard') return 100;
+    if (stored === 'comfortable') return 108;
+    if (stored === 'high') return 116;
+    const parsed = Number(stored);
+    return Number.isFinite(parsed) ? boundsVisualScale(parsed) : DEFAULT_VISUAL_SCALE;
 };
 
-const applyVisualComfort = (mode: VisualComfortMode) => {
+const applyVisualComfort = (scale: number) => {
     if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-visual-comfort', mode);
+    document.documentElement.style.setProperty('--comfort-scale', String(scale / 100));
 };
 
 export const initializeVisualComfort = () => {
-    const mode = readVisualComfort();
-    applyVisualComfort(mode);
+    applyVisualComfort(readVisualComfort());
 };
 
 export function useVisualComfort() {
-    const [mode, setMode] = useState<VisualComfortMode>(readVisualComfort);
+    const [scale, setScaleState] = useState<number>(readVisualComfort);
+
+    const setScale = (next: number) => setScaleState(boundsVisualScale(next));
 
     useEffect(() => {
-        applyVisualComfort(mode);
-        window.localStorage.setItem(STORAGE_KEY, mode);
-    }, [mode]);
+        applyVisualComfort(scale);
+        window.localStorage.setItem(STORAGE_KEY, String(scale));
+    }, [scale]);
 
-    return { mode, setMode };
+    return { scale, setScale };
 }

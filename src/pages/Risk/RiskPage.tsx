@@ -3,14 +3,8 @@ import { useQueries } from '@tanstack/react-query';
 import { riskApi } from '../../api/risk.api';
 import { useCourses } from '../../hooks/useCourses';
 import { riskKeys } from '../../hooks/useRisks';
+import { riskScoreStyles, riskScoreColor } from '../../utils/risk';
 import type { Course, RiskAnalysis } from '../../types';
-
-const riskStyles = {
-  CRITICAL: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error', bar: 'bg-error' },
-  HIGH: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error', bar: 'bg-error' },
-  MEDIUM: { bg: 'bg-tertiary/10', text: 'text-tertiary', dot: 'bg-tertiary', bar: 'bg-tertiary' },
-  LOW: { bg: 'bg-primary/10', text: 'text-primary', dot: 'bg-primary', bar: 'bg-primary' },
-};
 
 const GlobalSummary = ({ risks }: { risks: (RiskAnalysis | undefined)[] }) => {
   const defined = risks.filter((r): r is RiskAnalysis => !!r);
@@ -28,7 +22,7 @@ const GlobalSummary = ({ risks }: { risks: (RiskAnalysis | undefined)[] }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
         <div className="flex flex-col items-center text-center">
-          <div className="text-display-lg font-display-lg text-on-surface">{avg}</div>
+          <div className={`text-display-lg font-display-lg ${riskScoreStyles(avg).text}`}>{avg}</div>
           <div className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Score global</div>
         </div>
         <div className="flex flex-col items-center text-center border-l border-outline-variant pl-6 sm:pl-8">
@@ -48,7 +42,7 @@ const GlobalSummary = ({ risks }: { risks: (RiskAnalysis | undefined)[] }) => {
       <div className="sm:px-2">
         <div className="flex justify-between text-label-sm font-label-sm mb-2">
           <span className="text-on-surface-variant">Risque global</span>
-          <span className="text-on-surface">{avg} / 100</span>
+          <span className={riskScoreStyles(avg).text}>{avg} / 100</span>
         </div>
         <div className="h-2 w-full rounded-full bg-gradient-to-r from-primary via-tertiary to-error relative overflow-hidden">
           <div className="absolute right-0 top-0 bottom-0 bg-surface-container-highest transition-all duration-700 ease-out" style={{ width: `${Math.max(0, 100 - avg)}%` }} />
@@ -74,7 +68,7 @@ const RiskCard = ({ course, risk, onClick }: { course: Course; risk: RiskAnalysi
     );
   }
 
-  const theme = riskStyles[risk.level] ?? riskStyles.LOW;
+  const theme = riskScoreStyles(risk.overallScore);
   const factors = [
     { label: 'Performance', value: risk.details.performance },
     { label: 'Procrastination', value: risk.details.procrastination },
@@ -140,7 +134,7 @@ const Tips = ({ courses, risks }: { courses: Course[]; risks: (RiskAnalysis | un
       <div className="space-y-4">
         {worstRisks.map(({ risk, course }, i) => {
           const isLast = i === worstRisks.length - 1;
-          const circleColor = risk.level === 'HIGH' ? 'var(--color-tertiary)' : risk.level === 'CRITICAL' ? 'var(--color-error)' : 'var(--color-error)';
+          const circleColor = riskScoreColor(risk.overallScore);
 
           let subTitle = '', message = '';
           if (risk.details.pressure >= 70) {

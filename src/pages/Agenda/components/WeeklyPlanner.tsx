@@ -9,6 +9,7 @@ import {
   weekPlannerHours,
   type AgendaCourse,
 } from '../agendaShared';
+import { WeeklySlotGrid } from './WeeklySlotGrid';
 
 const HOUR_HEIGHT = 100;
 const GUTTER_WIDTH = 60;
@@ -48,7 +49,19 @@ export function WeeklyPlanner({
   }));
 
   return (
-    <div className="border border-outline-variant bg-surface-container-lowest rounded-xl flex flex-col min-h-[600px] overflow-hidden">
+    <>
+      {/* Mobile: compact slots grid (Lun → Sam) */}
+      <div className="md:hidden">
+        <WeeklySlotGrid
+          currentDate={currentDate}
+          events={events}
+          courses={courses}
+          onSelectEvent={onSelectEvent}
+        />
+      </div>
+
+      {/* Desktop: positioned weekly planner */}
+      <div className="hidden md:block border border-outline-variant bg-surface-container-lowest rounded-xl flex flex-col min-h-[600px] overflow-hidden">
       {/* Days Header */}
       <div
         className="grid border-b border-outline-variant bg-surface-bright shrink-0"
@@ -170,6 +183,7 @@ export function WeeklyPlanner({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

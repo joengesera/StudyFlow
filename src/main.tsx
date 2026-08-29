@@ -28,6 +28,8 @@ createRoot(document.getElementById('root')!).render(
         persister: queryPersister,
         maxAge: 1000 * 60 * 60 * 24 * 30,
       }}
+      onSuccess={() => console.info('[query-cache] restore OK — données IndexedDB remises en cache')}
+      onError={() => console.error('[query-cache] restore FAILED')}
     >
       <RouterProvider router={router} />
       {ReactQueryDevtools && (

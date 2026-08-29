@@ -28,6 +28,7 @@ interface SyncState {
   failedActions: FailedSyncAction[];
   isSyncing: boolean;
   isReady: boolean;
+  lastPulledAt: string | null;
 
   enqueueAction: (action: Omit<SyncAction, 'id' | 'timestamp' | 'attempts'>) => void;
   removeAction: (id: string) => void;
@@ -41,11 +42,13 @@ interface SyncState {
   clearQueue: () => void;
   setSyncing: (isSyncing: boolean) => void;
   setReady: (isReady: boolean) => void;
+  setLastPulledAt: (timestamp: string) => void;
 }
 
 const emptyQueueState = {
   queue: [] as SyncAction[],
   failedActions: [] as FailedSyncAction[],
+  lastPulledAt: null as string | null,
 };
 
 // Cible métier d'une action : l'id de l'entité visée (payload.id ou localId).
@@ -182,6 +185,7 @@ export const useSyncStore = create<SyncState>()(
       clearQueue: () => set({ queue: [] }),
       setSyncing: (isSyncing) => set({ isSyncing }),
       setReady: (isReady) => set({ isReady }),
+      setLastPulledAt: (timestamp) => set({ lastPulledAt: timestamp }),
     }),
     {
       name: 'sync-storage',
@@ -189,6 +193,7 @@ export const useSyncStore = create<SyncState>()(
       partialize: (state) => ({
         queue: state.queue,
         failedActions: state.failedActions,
+        lastPulledAt: state.lastPulledAt,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setReady(true);

@@ -12,15 +12,14 @@ const WEEK_DAYS = [
     { label: 'Mer', value: 3 },
     { label: 'Jeu', value: 4 },
     { label: 'Ven', value: 5 },
+    { label: 'Sam', value: 6 },
 ];
 
 const SLOT_TYPES = ['CM', 'TD', 'TP'];
 
 // ─── Interfaces ─────────────────────────────────────────────
-interface Slot {
+interface TimeSlot {
     id: string;
-    type: string;
-    days: number[]; // 1=Lun, 2=Mar, etc.
     startTime: string;
     endTime: string;
 }
@@ -47,8 +46,10 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
     const codeTouchedRef = useRef(isEditMode);
 
     const [addToSchedule, setAddToSchedule] = useState(false);
-    const [slots, setSlots] = useState<Slot[]>([
-        { id: Math.random().toString(), type: 'CM', days: [1], startTime: '08:00', endTime: '10:00' }
+    const [sessionType, setSessionType] = useState<'CM' | 'TD' | 'TP'>('CM');
+    const [selectedDays, setSelectedDays] = useState<number[]>([1]);
+    const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([
+        { id: Math.random().toString(), startTime: '08:00', endTime: '10:00' }
     ]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +58,6 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setForm(prev => {
-            if (name === 'code') codeTouchedRef.current = true;
             if (name === 'name' && !codeTouchedRef.current) {
                 return { ...prev, name: value, code: generateCourseCode(value) };
             }
@@ -65,49 +65,36 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
         });
     };
 
-    const handleRegenerateColor = () => {
-        setForm(prev => ({
-            ...prev,
-            color: generateRandomCourseColor(existingCourses.map((c) => c.color))
-        }));
-    };
-
     const handleAddSlot = () => {
-        setSlots(prev => [
+        setTimeSlots(prev => [
             ...prev,
-            { id: Math.random().toString(), type: 'TD', days: [], startTime: '14:00', endTime: '16:00' }
+            { id: Math.random().toString(), startTime: '09:00', endTime: '10:00' }
         ]);
     };
 
-    const handleUpdateSlot = (id: string, updates: Partial<Slot>) => {
-        setSlots(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    const handleUpdateSlot = (id: string, field: 'startTime' | 'endTime', value: string) => {
+        setTimeSlots(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
     };
 
-    const handleToggleDay = (slotId: string, dayValue: number) => {
-        setSlots(prev => prev.map(s => {
-            if (s.id !== slotId) return s;
-            const hasDay = s.days.includes(dayValue);
-            return {
-                ...s,
-                days: hasDay ? s.days.filter(d => d !== dayValue) : [...s.days, dayValue]
-            };
-        }));
+    const handleToggleDay = (dayValue: number) => {
+        setSelectedDays(prev =>
+            prev.includes(dayValue) ? prev.filter(d => d !== dayValue) : [...prev, dayValue]
+        );
     };
 
     const handleDeleteSlot = (id: string) => {
-        setSlots(prev => prev.filter(s => s.id !== id));
+        setTimeSlots(prev => prev.length > 1 ? prev.filter(s => s.id !== id) : prev);
     };
 
     const getPreviewEvents = () => {
-        const previews: { day: number; str: string; type: string }[] = [];
-        slots.forEach(slot => {
-            slot.days.forEach(day => {
+        const previews: { day: number; str: string }[] = [];
+        timeSlots.forEach(slot => {
+            selectedDays.forEach(day => {
                 const dayLabel = WEEK_DAYS.find(d => d.value === day)?.label;
                 const formatTime = (t: string) => t.replace(':', 'h').replace('h00', 'h');
                 previews.push({
                     day,
-                    type: slot.type,
-                    str: `${dayLabel} ${formatTime(slot.startTime)}–${formatTime(slot.endTime)} (${slot.type})`
+                    str: `${dayLabel} ${formatTime(slot.startTime)}–${formatTime(slot.endTime)} (${sessionType})`
                 });
             });
         });
@@ -129,38 +116,35 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                 const newCourse = await createCourse({ ...form, credits: Number(form.credits) });
                 courseId = newCourse.id;
 
-                if (addToSchedule && slots.length > 0) {
-                    const WEEKS_TO_GENERATE = 15;
+                if (addToSchedule && timeSlots.length > 0) {
                     const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
                     const eventPromises: Promise<unknown>[] = [];
 
-                    for (let week = 0; week < WEEKS_TO_GENERATE; week++) {
-                        for (const slot of slots) {
-                            for (const dayValue of slot.days) {
-                                const targetDate = addDays(startDate, (week * 7) + (dayValue - 1));
-                                const [startH, startM] = slot.startTime.split(':');
-                                const [endH, endM] = slot.endTime.split(':');
+                    for (const slot of timeSlots) {
+                        for (const dayValue of selectedDays) {
+                            const targetDate = addDays(startDate, dayValue - 1);
+                            const [startH, startM] = slot.startTime.split(':');
+                            const [endH, endM] = slot.endTime.split(':');
 
-                                const start = new Date(targetDate);
-                                start.setHours(Number(startH), Number(startM), 0, 0);
+                            const start = new Date(targetDate);
+                            start.setHours(Number(startH), Number(startM), 0, 0);
 
-                                const end = new Date(targetDate);
-                                end.setHours(Number(endH), Number(endM), 0, 0);
+                            const end = new Date(targetDate);
+                            end.setHours(Number(endH), Number(endM), 0, 0);
 
-                                let eventType: EventType = 'CLASS';
-                                if (slot.type === 'TP') eventType = 'TP';
+                            let eventType: EventType = 'CLASS';
+                            if (sessionType === 'TP') eventType = 'TP';
 
-                                eventPromises.push(
-                                    createEvent({
-                                        courseId,
-                                        title: `${form.name} - ${slot.type}`,
-                                        type: eventType,
-                                        startDate: start.toISOString(),
-                                        endDate: end.toISOString(),
-                                        isAllDay: false
-                                    })
-                                );
-                            }
+                            eventPromises.push(
+                                createEvent({
+                                    courseId,
+                                    title: `${form.name} - ${sessionType}`,
+                                    type: eventType,
+                                    startDate: start.toISOString(),
+                                    endDate: end.toISOString(),
+                                    isAllDay: false
+                                })
+                            );
                         }
                     }
                     await Promise.allSettled(eventPromises);
@@ -183,76 +167,35 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                 </h2>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                    {/* TOP SECTION: Name and Code */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-2">
-                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                                Nom du cours
-                            </label>
-                            <input
-                                name="name"
-                                value={form.name}
-                                onChange={handleChange}
-                                placeholder="Algorithmique"
-                                required
-                                className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                                Code
-                            </label>
-                            <input
-                                name="code"
-                                value={form.code}
-                                onChange={handleChange}
-                                placeholder="Généré du nom"
-                                required
-                                className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
-                            />
-                        </div>
+                    {/* TOP SECTION: Name */}
+                    <div>
+                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                            Nom du cours
+                        </label>
+                        <input
+                            name="name"
+                            value={form.name}
+                            onChange={handleChange}
+                            placeholder="Algorithmique"
+                            required
+                            className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
+                        />
                     </div>
 
-                    {/* MID SECTION: Credits and Color */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                                Crédits
-                            </label>
-                            <input
-                                name="credits"
-                                type="number"
-                                min={1}
-                                max={10}
-                                value={form.credits}
-                                onChange={handleChange}
-                                className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
-                            />
-                        </div>
-                        <div className="md:col-span-2 gap-4">
-                            <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
-                                Couleur <span className="normal-case font-medium text-[#A3A3A3]">— générée aléatoirement</span>
-                            </label>
-                            <div className="flex items-center h-[46px] gap-3">
-                                <span
-                                    className="w-[26px] h-[26px] rounded-full border border-[#E5E5E5] shadow-sm shrink-0"
-                                    style={{ background: form.color }}
-                                    title={form.color}
-                                />
-                                <span className="text-[13px] font-medium text-[#A3A3A3] uppercase">{form.color}</span>
-                                <button
-                                    type="button"
-                                    onClick={handleRegenerateColor}
-                                    aria-label="Générer une nouvelle couleur"
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E5E5] text-[13px] font-medium text-[#1A1A1A] hover:bg-gray-50 transition-colors"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992V4.356m-.992 4.992a7.5 7.5 0 1 0-1.867 7.774M2.985 19.644v-4.992h4.992m-4.992 0a7.5 7.5 0 1 1 1.867-7.774" />
-                                    </svg>
-                                    Regénérer
-                                </button>
-                            </div>
-                        </div>
+                    {/* MID SECTION: Credits */}
+                    <div>
+                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                            Crédits
+                        </label>
+                        <input
+                            name="credits"
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={form.credits}
+                            onChange={handleChange}
+                            className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
+                        />
                     </div>
 
                     {!isEditMode && (
@@ -263,7 +206,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                             <div className="flex justify-between items-center">
                                 <div>
                                     <div className="text-[15px] font-bold text-[#1A1A1A] mb-0.5">Ajouter à l'emploi du temps</div>
-                                    <div className="text-[13px] text-[#737373]">Crée les événements récurrents dans l'agenda</div>
+                                    <div className="text-[13px] text-[#737373]">Ajoute les créneaux dans l'agenda de la semaine en cours</div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input 
@@ -277,94 +220,127 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                 </label>
                             </div>
 
-                            {/* SLOTS LIST */}
+                            {/* SLOTS EDITOR */}
                             {addToSchedule && (
-                                <div className="flex flex-col gap-4">
-                                    
-                                    {slots.map((slot) => (
-                                        <div key={slot.id} className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-lg p-5 relative flex items-center gap-6">
-                                            
-                                            {/* Type */}
-                                            <div className="w-6 shrink-0 text-center">
-                                                <select 
-                                                    value={slot.type}
-                                                    onChange={(e) => handleUpdateSlot(slot.id, { type: e.target.value })}
-                                                    className="appearance-none bg-transparent text-[13px] font-bold text-[#737373] outline-none cursor-pointer w-full text-center"
-                                                >
-                                                    {SLOT_TYPES.map(st => <option key={st}>{st}</option>)}
-                                                </select>
-                                            </div>
+                                <div className="flex flex-col gap-5">
 
-                                            {/* Days (Grid) */}
-                                            <div className="grid grid-cols-2 gap-2 w-[110px]">
-                                                {WEEK_DAYS.map(day => {
-                                                    const isActive = slot.days.includes(day.value);
-                                                    return (
-                                                        <button
-                                                            key={day.value}
-                                                            type="button"
-                                                            onClick={() => handleToggleDay(slot.id, day.value)}
-                                                            className={`h-8 text-[13px] font-medium rounded-lg border transition-colors flex items-center justify-center
-                                                                ${isActive 
-                                                                    ? 'bg-white text-[#1A1A1A] border-[#A3A3A3] shadow-sm' 
-                                                                    : 'bg-transparent text-[#1A1A1A] border-[#E5E5E5] hover:border-[#A3A3A3]'}
-                                                            `}
-                                                        >
-                                                            {day.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {/* Flex spacing */}
-                                            <div className="flex-1" />
-
-                                            {/* Time block */}
-                                            <div className="flex items-center gap-2">
-                                                <div className="relative flex items-center bg-white border border-[#E5E5E5] rounded-lg h-9 w-[80px] px-3">
-                                                    <input 
-                                                        type="time" 
-                                                        value={slot.startTime} 
-                                                        onChange={(e) => handleUpdateSlot(slot.id, { startTime: e.target.value })}
-                                                        className="w-full text-[14px] font-medium text-[#1A1A1A] bg-transparent outline-none z-10"
-                                                    />
-                                                    <svg className="absolute right-2 w-4 h-4 text-[#1A1A1A] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 7v5l3 2" />
-                                                    </svg>
-                                                </div>
-                                                <span className="text-[#A3A3A3] text-sm">→</span>
-                                                <div className="relative flex items-center bg-white border border-[#E5E5E5] rounded-lg h-9 w-[80px] px-3">
-                                                    <input 
-                                                        type="time" 
-                                                        value={slot.endTime} 
-                                                        onChange={(e) => handleUpdateSlot(slot.id, { endTime: e.target.value })}
-                                                        className="w-full text-[14px] font-medium text-[#1A1A1A] bg-transparent outline-none z-10"
-                                                    />
-                                                    <svg className="absolute right-2 w-4 h-4 text-[#1A1A1A] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 7v5l3 2" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-
-                                            {/* Delete Slot Btn */}
-                                            <button 
-                                                type="button" 
-                                                onClick={() => handleDeleteSlot(slot.id)}
-                                                className="absolute right-3.5 text-[#A3A3A3] hover:text-[#E74C3C] text-lg w-5 h-5 flex items-center justify-center transition-colors pb-0.5"
+                                    {/* Session */}
+                                    <div>
+                                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                                            Session
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={sessionType}
+                                                onChange={(e) => setSessionType(e.target.value as 'CM' | 'TD' | 'TP')}
+                                                className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] bg-white text-[15px] font-medium text-[#1A1A1A] outline-none appearance-none cursor-pointer focus:border-[#A3A3A3] transition-colors"
                                             >
-                                                ✕
-                                            </button>
+                                                {SLOT_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
+                                            </select>
+                                            <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#737373] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
-                                    ))}
+                                    </div>
 
+                                    {/* Days */}
+                                    <div>
+                                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                                            Jours
+                                        </label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {WEEK_DAYS.map(day => {
+                                                const isActive = selectedDays.includes(day.value);
+                                                return (
+                                                    <button
+                                                        key={day.value}
+                                                        type="button"
+                                                        onClick={() => handleToggleDay(day.value)}
+                                                        aria-pressed={isActive}
+                                                        className={`h-[38px] px-5 rounded-full text-[14px] font-medium border transition-colors ${
+                                                            isActive
+                                                                ? 'bg-[#0d0d0d] text-white border-[#0d0d0d] shadow-sm'
+                                                                : 'bg-[#FAF9F6] text-[#1A1A1A] border-[#E5E5E5] hover:border-[#A3A3A3]'
+                                                        }`}
+                                                    >
+                                                        {day.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Time slots */}
+                                    <div>
+                                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                                            Horaires
+                                        </label>
+                                        <div className="flex flex-col gap-3">
+                                            {timeSlots.map((slot, index) => (
+                                                <div key={slot.id} className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-lg p-4">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <span className="text-[11px] font-bold text-[#737373] uppercase tracking-widest">
+                                                            Créneau {index + 1}
+                                                        </span>
+                                                        {timeSlots.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteSlot(slot.id)}
+                                                                aria-label="Supprimer ce créneau"
+                                                                className="text-[#A3A3A3] hover:text-[#E74C3C] text-base w-6 h-6 flex items-center justify-center transition-colors -mr-1"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[11px] font-medium text-[#A3A3A3] mb-1.5 block">
+                                                                Début
+                                                            </label>
+                                                            <div className="relative flex items-center bg-white border border-[#E5E5E5] rounded-lg h-10 pl-3 pr-2 focus-within:border-[#A3A3A3] transition-colors">
+                                                                <svg className="w-4 h-4 text-[#737373] shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 7v5l3 2" />
+                                                                </svg>
+                                                                <input
+                                                                    type="time"
+                                                                    value={slot.startTime}
+                                                                    onChange={(e) => handleUpdateSlot(slot.id, 'startTime', e.target.value)}
+                                                                    className="w-full min-w-0 bg-transparent outline-none text-[14px] font-medium text-[#1A1A1A] px-2"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-medium text-[#A3A3A3] mb-1.5 block">
+                                                                Fin
+                                                            </label>
+                                                            <div className="relative flex items-center bg-white border border-[#E5E5E5] rounded-lg h-10 pl-3 pr-2 focus-within:border-[#A3A3A3] transition-colors">
+                                                                <svg className="w-4 h-4 text-[#737373] shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 7v5l3 2" />
+                                                                </svg>
+                                                                <input
+                                                                    type="time"
+                                                                    value={slot.endTime}
+                                                                    onChange={(e) => handleUpdateSlot(slot.id, 'endTime', e.target.value)}
+                                                                    className="w-full min-w-0 bg-transparent outline-none text-[14px] font-medium text-[#1A1A1A] px-2"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Ajouter un créneau */}
                                     <button
                                         type="button"
                                         onClick={handleAddSlot}
-                                        className="w-full py-3.5 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] hover:bg-gray-50 transition-colors"
+                                        className="self-start flex items-center gap-1 text-[14px] font-semibold text-[#0d0d0d] hover:opacity-70 transition-opacity"
                                     >
-                                        + Ajouter un créneau
+                                        <span className="text-xl leading-none">+</span> Ajouter un créneau
                                     </button>
 
                                     {/* Aperçu */}
@@ -378,7 +354,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div className="text-[12px] text-[#737373]">· chaque semaine</div>
+                                            <div className="text-[12px] text-[#737373]">· une seule fois (semaine en cours)</div>
                                         </div>
                                     )}
                                 </div>

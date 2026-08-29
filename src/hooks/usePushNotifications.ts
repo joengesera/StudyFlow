@@ -226,6 +226,11 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
         if (!isPushSupported) return;
 
         try {
+            if (SHOULD_SYNC_WITH_BACKEND) {
+                await apiClient.post('/notifications/test');
+                return;
+            }
+
             const registration = await navigator.serviceWorker.ready;
             await registration.showNotification('StudyFlow', {
                 body: 'Notifications push prêtes.',

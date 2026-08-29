@@ -8,6 +8,7 @@ import { SmartCreateModal } from '../components/smart/SmartCreateModal';
 import { ToastHost } from '../components/ToastHost';
 import { NotificationCenter } from '../components/NotificationCenter/NotificationCenter';
 import { useLocalNotifications } from '../hooks/useLocalNotifications';
+import { getInitials } from '../utils/initials';
 import logo from '@/assets/Fichier1.svg';
 
 const navItems = [
@@ -28,7 +29,7 @@ const bottomNavItems = [
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [smartCreateOpen, setSmartCreateOpen] = useState(false);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const location = useLocation();
   const isSyncReady = useSyncStore((state) => state.isReady);
 
@@ -185,12 +186,8 @@ export default function AppLayout() {
           <div className="flex items-center gap-2 md:gap-4">
             <SyncStatus />
             <NotificationCenter />
-            <div className="w-8 h-8 rounded-full bg-surface-container border border-outline-variant overflow-hidden flex items-center justify-center">
-              <img
-                alt="User Profile"
-                className="object-cover w-full h-full"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjPgzRluqsnXngceN6sTBSyymxvKejnhWpH49qeMWUOsjF1BD21aFPaAPRDbwTJcADK6v3lWcbvRxhP3AiC_1cvwagDRwyu8MSxoq99FOe3-aYxm-lYRonMG6_bPJp1msaFViKq_ABthhFCJy_L8XkyWgibkmtnFiBnI38vMrmOXSJmu9ZO80J8FhtorXSWNdvJ1fbyD8b3zuE4NmJd9Zlp69IEV9PxkSTYS7brmrvSmT0I8S36_HCag"
-              />
+            <div className="w-8 h-8 rounded-full bg-surface-container border border-outline-variant flex items-center justify-center text-[12px] font-semibold text-on-surface shrink-0" title={user?.name}>
+              {getInitials(user?.name)}
             </div>
           </div>
         </header>
@@ -228,7 +225,7 @@ function getPageTitle(path: string): string {
     '/works': 'Travaux',
     '/risk': 'Analyse de risque',
     '/profile': 'Profil',
-    '/settings': 'Paramètres',
+    
   };
   return titles[path] || 'StudyFlow';
 }

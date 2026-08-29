@@ -5,15 +5,10 @@ import { useGrades } from '../../hooks/useGrades';
 import { useTasks } from '../../hooks/useTasks';
 import { useEvents } from '../../hooks/useEvents';
 import { useRisk } from '../../hooks/useRisks';
+import { pointsAverage } from '../../utils/pointsEngine';
+import { riskScoreStyles } from '../../utils/risk';
 import type { Course, Task, Event } from '../../types';
 import CourseFormModal from '../../components/Courses/CourseFormModal';
-
-const riskStyles = {
-  LOW: { bg: 'bg-primary/10', text: 'text-primary', dot: 'bg-primary' },
-  MEDIUM: { bg: 'bg-tertiary/10', text: 'text-tertiary', dot: 'bg-tertiary' },
-  HIGH: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error' },
-  CRITICAL: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error' },
-};
 
 interface CourseCardProps {
   course: Course;
@@ -29,14 +24,12 @@ const CourseCard = ({ course, tasks, events, onClick }: CourseCardProps) => {
   const courseTasks = tasks.filter(t => t.courseId === course.id && !t.isDeleted);
   const courseEvents = events.filter(e => e.courseId === course.id);
 
-  const average = grades.length === 0 ? null :
-    grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 100) * (g.weight ?? 1), 0) /
-    grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
+  const average = grades.length === 0 ? null : pointsAverage(grades);
 
   const riskLevel = risk?.level || 'LOW';
-  const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
+  const rStyle = riskScoreStyles(risk?.overallScore ?? 0);
 
-  const progressValue = average !== null ? Math.min(average, 100) : 0;
+  const progressValue = average !== null ? Math.min(average * 5, 100) : 0;
 
   const initial = course.code.charAt(0).toUpperCase();
 

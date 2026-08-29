@@ -7,17 +7,12 @@ import { useGrades, useCreateGrade } from '../../hooks/useGrades';
 import { useEvents } from '../../hooks/useEvents';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useRisk } from '../../hooks/useRisks';
+import { pointsAverage, type PointItem } from '../../utils/pointsEngine';
+import { riskScoreStyles } from '../../utils/risk';
 import CourseFormModal from '../../components/Courses/CourseFormModal';
 import type { Grade } from '../../types';
 
 type Tab = 'notes' | 'travaux' | 'taches' | 'evenements' | 'risque';
-
-const riskStyles = {
-  LOW: { bg: 'bg-primary/10', text: 'text-primary', dot: 'bg-primary' },
-  MEDIUM: { bg: 'bg-tertiary/10', text: 'text-tertiary', dot: 'bg-tertiary' },
-  HIGH: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error' },
-  CRITICAL: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error' },
-};
 
 const typeToLabel = (grade: Grade): string => {
   if (grade.workTypeLabel) return grade.workTypeLabel;
@@ -42,12 +37,31 @@ const getScoreColor = (score: number, max: number) => {
   return 'text-error';
 };
 
-const simulateGrade = (grades: Grade[], target: number, nextWeight: number = 1): number | null => {
+// Note (sur 20) nécessaire au prochain devoir pour atteindre la cible, via le
+// même moteur que le backend : le candidat reçoit la pondération du type choisi.
+const neededNextGrade = (
+  grades: Grade[],
+  target: number,
+  nextType: { workTypeLabel: string; percentage?: number | null },
+): number | null => {
   if (grades.length === 0) return target;
-  const totalWeight = grades.reduce((sum, g) => sum + (g.weight ?? 1), 0) + nextWeight;
-  const currentSum = grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 100) * (g.weight ?? 1), 0);
-  const needed = (target * totalWeight - currentSum) / nextWeight;
-  return Math.round(needed * 100) / 100;
+  const candidate = (score: number): PointItem => ({
+    score,
+    maxScore: 20,
+    workTypeLabel: nextType.workTypeLabel,
+    percentage: nextType.percentage ?? null,
+  });
+  const averageAt = (score: number) => pointsAverage([...grades, candidate(score)]);
+  if (averageAt(0) >= target) return 0;
+  if (averageAt(20) < target) return null;
+  let lo = 0;
+  let hi = 20;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (averageAt(mid) < target) lo = mid;
+    else hi = mid;
+  }
+  return Math.round(hi * 100) / 100;
 };
 
 const NotesTab = ({ courseId }: { courseId: string }) => {
@@ -56,13 +70,16 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
   const { mutate: createGrade, isPending: isCreating } = useCreateGrade();
   const [showForm, setShowForm] = useState(false);
   const [simulatorTarget, setSimulatorTarget] = useState<number | ''>(10);
-  const [form, setForm] = useState({ name: '', score: '', maxScore: '20', weight: '1', workTypeLabel: 'EXAMEN' });
+  const [form, setForm] = useState({ name: '', score: '', maxScore: '20', workTypeLabel: 'EXAMEN' });
+
+  const weightPercentToTwenty = (wp: number | null | undefined): string =>
+    wp == null ? '-' : `${Math.round((wp / 5) * 10) / 10} / 20`;
 
   const workTypeOptions = useMemo(() => {
     if (courseWorkTypes.length > 0) {
       return courseWorkTypes.map((item) => ({
         value: item.type,
-        label: `${item.type} (${item.weightPercent}%)`,
+        label: `${item.type} (${weightPercentToTwenty(item.weightPercent)})`,
         weightPercent: item.weightPercent
       }));
     }
@@ -78,11 +95,12 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
     ? normalizedFormType
     : (workTypeOptions[0]?.value ?? 'EXAMEN');
 
-  const average = grades.length === 0 ? null :
-    grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 100) * (g.weight ?? 1), 0) /
-    grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
+  const average = grades.length === 0 ? null : pointsAverage(grades);
 
-  const needed = simulateGrade(grades, Number(simulatorTarget));
+  const needed = neededNextGrade(grades, Number(simulatorTarget), {
+    workTypeLabel: currentTypeValue,
+    percentage: workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent ?? null,
+  });
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +110,6 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
         ...form,
         score: Number(form.score),
         maxScore: Number(form.maxScore),
-        weight: Number(form.weight),
         workTypeLabel: currentTypeValue,
         percentage: selectedType?.weightPercent ?? undefined,
         courseId
@@ -104,7 +121,6 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
             name: '',
             score: '',
             maxScore: '20',
-            weight: '1',
             workTypeLabel: workTypeOptions[0]?.value ?? 'EXAMEN'
           });
         }
@@ -136,7 +152,7 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
       {/* Add Form */}
       {showForm && (
         <form onSubmit={handleCreate} className="card card-padded space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="col-span-2">
               <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Nom</label>
               <input
@@ -169,17 +185,6 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
                 className="input input-bordered w-full h-12 text-base"
               />
             </div>
-            <div>
-              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Coeff.</label>
-              <input
-                type="number"
-                value={form.weight}
-                onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                min={0.5}
-                step="0.5"
-                className="input input-bordered w-full h-12 text-base"
-              />
-            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -198,7 +203,7 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
               <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Pondération appliquée</label>
               <input
                 readOnly
-                value={`${workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent ?? '-'}%`}
+                value={weightPercentToTwenty(workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent)}
                 className="input w-full h-12 text-base bg-surface-container"
               />
             </div>
@@ -236,7 +241,6 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
                     <div className="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-2">
                       <span>{typeLabel}</span>
                       <span className="w-1 h-1 bg-outline-variant rounded-full" />
-                      <span>coeff. {grade.weight ?? 1}</span>
                       {grade.date && (
                         <span className="w-1 h-1 bg-outline-variant rounded-full" />
                       )}
@@ -282,13 +286,11 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
           />
           <span className="text-body-md font-body-md text-on-surface ml-2">→ Il te faut au moins</span>
           <span className="text-headline-sm font-headline-sm text-on-surface">
-            {needed !== null
-              ? needed > 20
-                ? 'Impossible — trop haut'
-                : needed < 0
-                  ? 'Déjà atteint !'
-                  : `${needed} / 20`
-              : '— / 20'}
+            {needed === null
+              ? 'Impossible — trop haut'
+              : needed <= 0
+                ? 'Déjà atteint !'
+                : `${needed} / 20`}
           </span>
         </div>
       </div>
@@ -420,8 +422,7 @@ const RiskTab = ({ courseId }: { courseId: string }) => {
     { label: 'Pression examen', value: risk.details.pressure },
   ];
 
-  const riskLevel = risk.level || 'LOW';
-  const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
+  const rStyle = riskScoreStyles(risk.overallScore);
 
   return (
     <div className="card card-padded space-y-6">
@@ -429,7 +430,7 @@ const RiskTab = ({ courseId }: { courseId: string }) => {
         <div>
           <div className="text-label-sm font-label-sm text-on-surface-variant mb-1">Score de risque global</div>
           <div className="flex items-baseline gap-2">
-            <span className="text-display-lg font-display-lg text-on-surface">{risk.overallScore}</span>
+            <span className={`text-display-lg font-display-lg ${rStyle.text}`}>{risk.overallScore}</span>
             <span className="text-headline-md font-headline-md text-on-surface-variant">/ 100</span>
           </div>
         </div>
@@ -481,12 +482,10 @@ export default function CourseDetailPage() {
 
   const courseTasks = tasks.filter(t => t.courseId === id && !t.isDeleted);
 
-  const average = grades.length === 0 ? null :
-    grades.reduce((sum, g) => sum + ((g.score / g.maxScore) * 100) * (g.weight ?? 1), 0) /
-    grades.reduce((sum, g) => sum + (g.weight ?? 1), 0);
+  const average = grades.length === 0 ? null : pointsAverage(grades);
 
   const riskLevel = risk?.level || 'LOW';
-  const rStyle = riskStyles[riskLevel as keyof typeof riskStyles] || riskStyles.LOW;
+  const rStyle = riskScoreStyles(risk?.overallScore ?? 0);
 
   if (isLoading) return <div className="max-w-4xl mx-auto h-[300px] bg-surface-container-highest/50 rounded-xl animate-pulse" />;
 
@@ -578,7 +577,7 @@ export default function CourseDetailPage() {
             <span className="material-symbols-outlined text-error">shield</span>
             <span className="text-label-caps font-label-caps text-on-surface-variant">Risque</span>
           </div>
-          <div className="text-display-lg font-display-lg text-error">{Math.round(risk?.overallScore || 0)}</div>
+          <div className="text-display-lg font-display-lg ${riskScoreStyles(risk?.overallScore ?? 0).text}">{Math.round(risk?.overallScore || 0)}</div>
         </div>
       </div>
 

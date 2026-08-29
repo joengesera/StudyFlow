@@ -38,6 +38,13 @@ export default defineConfig({
               purpose: "any maskable"
             }
           ]
+        },
+        injectManifest: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
+          // La police Material Symbols fait ~3,9 Mo : au-dessus de la limite
+          // défaut (2 Mo) elle serait exclue du précache, et les icônes
+          // disparaîtraient hors ligne.
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         }
       }
     )

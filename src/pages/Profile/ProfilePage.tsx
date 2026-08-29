@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
 import { useAuthStore } from '../../stores/authStore';
-import { useVisualComfort, type VisualComfortMode } from '../../hooks/useVisualComfort';
+import { useVisualComfort, MIN_VISUAL_SCALE, MAX_VISUAL_SCALE, DEFAULT_VISUAL_SCALE } from '../../hooks/useVisualComfort';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { apiClient } from '../../api/client';
+import { getInitials } from '../../utils/initials';
 
 const usePwaInstall = () => {
   const [prompt, setPrompt] = useState<Event & { prompt?: () => void } | null>(null);
@@ -46,7 +47,7 @@ const PersonalInfoSection = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex items-center gap-5 p-4 bg-surface-container rounded-lg">
           <div className="w-16 h-16 rounded-full border border-outline-variant bg-surface-container-lowest flex items-center justify-center text-2xl font-bold text-on-surface shrink-0">
-            {user?.name?.charAt(0).toUpperCase()}
+            {getInitials(user?.name)}
           </div>
           <div className="flex-1">
             <div className="text-body-lg font-body-lg font-medium text-on-surface">{user?.name}</div>
@@ -65,23 +66,7 @@ const PersonalInfoSection = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Langue</label>
-            <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} className="input input-bordered w-full h-12 text-base">
-              <option value="fr">Français</option>
-              <option value="en">Anglais</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Fuseau horaire</label>
-            <select value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} className="input input-bordered w-full h-12 text-base">
-              <option value="Europe/Paris">Europe/Paris (UTC+1)</option>
-              <option value="UTC">UTC</option>
-              <option value="America/New_York">America/New_York (EST)</option>
-            </select>
-          </div>
-        </div>
+      
 
         {error && <div className="text-label-sm font-label-sm text-error">{error}</div>}
         {success && <div className="text-label-sm font-label-sm text-primary">Profil mis à jour avec succès.</div>}
@@ -96,37 +81,48 @@ const PersonalInfoSection = () => {
   );
 };
 
-const visualComfortOptions: Array<{ value: VisualComfortMode; title: string; description: string; scale: string }> = [
-  { value: 'standard', title: 'Standard', description: 'Taille actuelle', scale: '100%' },
-  { value: 'comfortable', title: 'Confort', description: 'Texte plus lisible', scale: '108%' },
-  { value: 'high', title: 'Confort+', description: 'Maximum lisibilité', scale: '116%' },
-];
-
 const VisualComfortSection = () => {
-  const { mode, setMode } = useVisualComfort();
+  const { scale, setScale } = useVisualComfort();
+  const formatPercent = (value: number) => `${value}%`;
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-4">
         <span className="material-symbols-outlined text-primary text-[20px]">settings</span>
         <div className="text-label-caps font-label-caps text-on-surface-variant">Accessibilité visuelle</div>
       </div>
-      <p className="text-body-md font-body-md text-on-surface-variant mb-4">Ajuste la taille globale des textes pour un meilleur confort de lecture.</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {visualComfortOptions.map((option) => {
-          const selected = mode === option.value;
-          return (
-            <button key={option.value} type="button" onClick={() => setMode(option.value)} aria-pressed={selected}
-              className={`text-left card card-padded transition-colors ${selected ? 'ring-2 ring-primary' : 'hover:border-primary'}`}
-            >
-              <div className="text-body-md font-body-md font-medium text-on-surface">{option.title}</div>
-              <div className="text-label-sm font-label-sm text-on-surface-variant mt-1">{option.description}</div>
-              <div className={`mt-2 inline-flex px-2 py-1 rounded text-label-caps font-label-caps ${selected ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
-                {option.scale}
-              </div>
-            </button>
-          );
-        })}
+      <p className="text-body-md font-body-md text-on-surface-variant mb-4">Ajuste la taille globale des textes de 100 à 200 % pour un meilleur confort de lecture.</p>
+      <div className="flex items-center gap-4 mb-1">
+        <input
+          type="range"
+          min={MIN_VISUAL_SCALE}
+          max={MAX_VISUAL_SCALE}
+          step={10}
+          value={scale}
+          onChange={(e) => setScale(Number(e.target.value))}
+          aria-label="Taille des textes"
+          className="range range-primary flex-1"
+        />
+        <div className={`min-w-16 px-3 py-1 rounded text-label-caps font-label-caps whitespace-nowrap ${scale === DEFAULT_VISUAL_SCALE ? 'bg-surface-container-highest text-on-surface-variant' : 'bg-primary text-on-primary'}`}>
+          {formatPercent(scale)}
+        </div>
       </div>
+      <div className="flex justify-between text-label-sm font-label-sm text-on-surface-variant mb-4">
+        <span>{formatPercent(MIN_VISUAL_SCALE)}</span>
+        <span>Exemple de texte : la taille change en direct.</span>
+        <span>{formatPercent(MAX_VISUAL_SCALE)}</span>
+      </div>
+      <div className="rounded p-4 bg-surface-container-highest text-body-md font-body-md text-on-surface" aria-live="polite">
+        Régler la taille des textes améliore le confort de lecture de toute l'application, y compris les titres et les listes de cours.
+      </div>
+      {scale !== DEFAULT_VISUAL_SCALE && (
+        <button
+          type="button"
+          onClick={() => setScale(DEFAULT_VISUAL_SCALE)}
+          className="btn btn-neutral btn-sm mt-4"
+        >
+          Réinitialiser
+        </button>
+      )}
     </section>
   );
 };

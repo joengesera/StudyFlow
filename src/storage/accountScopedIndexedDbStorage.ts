@@ -209,11 +209,16 @@ export const createAccountScopedIndexedDbStorage = (resolveScope: ScopeResolver)
 
   setItem: async (key, value) => {
     const scope = resolveScope();
+    // Le chiffrement (crypto.subtle) est asynchrone : on le fait AVANT
+    // d'ouvrir la transaction, sinon celle-ci s'auto-committe pendant
+    // l'await (aucune requête en attente) et le put suivant échoue avec
+    // TransactionInactiveError — ce qui cassait toute la persistance.
+    const encryptedValue = await encryptValue(scope, value);
+
     const db = await openDatabase();
     const tx = db.transaction(STATE_STORE, 'readwrite');
     const store = tx.objectStore(STATE_STORE);
     const recordId = buildRecordId(scope, key);
-    const encryptedValue = await encryptValue(scope, value);
 
     const record: PersistedRecord = {
       id: recordId,

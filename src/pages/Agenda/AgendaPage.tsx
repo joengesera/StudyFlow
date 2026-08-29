@@ -7,6 +7,7 @@ import { AgendaHeader } from './components/AgendaHeader';
 import { CalendarGrid } from './components/CalendarGrid';
 import { CreateEventModal } from './components/CreateEventModal';
 import { CourseFilterBar } from './components/CourseFilterBar';
+import { DayTimelineView } from './components/DayTimelineView';
 import { EventModal } from './components/EventModal';
 import { SelectedDayEventsList } from './components/SelectedDayEventsList';
 import { WeeklyPlanner } from './components/WeeklyPlanner';
@@ -102,6 +103,29 @@ export default function AgendaPage() {
             courses={activeCourses}
             onSelectEvent={setSelectedEvent}
           />
+        </>
+      ) : viewMode === 'day' ? (
+        <>
+          <div className="md:hidden">
+            <DayTimelineView
+              currentDate={currentDate}
+              events={filteredEvents}
+              courses={activeCourses}
+              onSelectDay={(day) => {
+                setSelectedDay(day);
+                setCurrentDate(day);
+              }}
+              onSelectEvent={setSelectedEvent}
+            />
+          </div>
+          <div className="hidden md:block">
+            <WeeklyPlanner
+              currentDate={currentDate}
+              events={filteredEvents}
+              courses={activeCourses}
+              onSelectEvent={setSelectedEvent}
+            />
+          </div>
         </>
       ) : (
         <WeeklyPlanner

@@ -80,6 +80,7 @@ export interface Grade {
     comment?: string | null;
     courseId: string;
     workTypeId?: string | null;
+    workType?: { type?: string | null; weightPercent?: number | null } | null;
     createdAt: string;
     updatedAt: string;
 }

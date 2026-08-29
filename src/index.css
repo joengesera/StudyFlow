@@ -120,40 +120,40 @@
   --sidebar-width: var(--width-sidebar);
   --sidebar-compact: var(--spacing-sidebar-compact);
 
-  /* Typography */
-  --text-label-caps: 12px;
-  --text-label-caps-line: 16px;
+/* Typography */
+  --text-label-caps: calc(12px * var(--comfort-scale));
+  --text-label-caps-line: calc(16px * var(--comfort-scale));
   --text-label-caps-weight: 600;
   --text-label-caps-tracking: 0.05em;
 
-  --text-body-md: 14px;
-  --text-body-md-line: 20px;
+  --text-body-md: calc(14px * var(--comfort-scale));
+  --text-body-md-line: calc(20px * var(--comfort-scale));
   --text-body-md-weight: 400;
 
-  --text-label-sm: 12px;
-  --text-label-sm-line: 16px;
+  --text-label-sm: calc(12px * var(--comfort-scale));
+  --text-label-sm-line: calc(16px * var(--comfort-scale));
   --text-label-sm-weight: 500;
 
-  --text-headline-sm: 18px;
-  --text-headline-sm-line: 24px;
+  --text-headline-sm: calc(18px * var(--comfort-scale));
+  --text-headline-sm-line: calc(24px * var(--comfort-scale));
   --text-headline-sm-weight: 600;
 
-  --text-headline-md: 24px;
-  --text-headline-md-line: 32px;
+  --text-headline-md: calc(24px * var(--comfort-scale));
+  --text-headline-md-line: calc(32px * var(--comfort-scale));
   --text-headline-md-weight: 600;
   --text-headline-md-tracking: -0.01em;
 
-  --text-display-lg: 32px;
-  --text-display-lg-line: 40px;
+  --text-display-lg: calc(32px * var(--comfort-scale));
+  --text-display-lg-line: calc(40px * var(--comfort-scale));
   --text-display-lg-weight: 600;
   --text-display-lg-tracking: -0.02em;
 
-  --text-body-lg: 16px;
-  --text-body-lg-line: 24px;
+  --text-body-lg: calc(16px * var(--comfort-scale));
+  --text-body-lg-line: calc(24px * var(--comfort-scale));
   --text-body-lg-weight: 400;
 
-  --text-display-lg-mobile: 26px;
-  --text-display-lg-mobile-line: 32px;
+  --text-display-lg-mobile: calc(26px * var(--comfort-scale));
+  --text-display-lg-mobile-line: calc(32px * var(--comfort-scale));
   --text-display-lg-mobile-weight: 600;
 }
 
@@ -162,16 +162,8 @@
     --comfort-scale: 1;
   }
 
-  html[data-visual-comfort='comfortable'] {
-    --comfort-scale: 1.08;
-  }
-
-  html[data-visual-comfort='high'] {
-    --comfort-scale: 1.16;
-  }
-
   html {
-    font-size: 16px;
+    font-size: calc(16px * var(--comfort-scale));
     color-scheme: light;
   }
 

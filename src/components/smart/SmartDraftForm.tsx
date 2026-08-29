@@ -152,7 +152,7 @@ export function SmartDraftForm({ autoFocus = false, onCreated }: SmartDraftFormP
               title="Cours détecté automatiquement"
             >
               <span className="w-2 h-2 rounded-full" style={{ background: matches[0].color }} />
-              {matches[0].code}
+              {matches[0].name}
             </span>
           )}
 
@@ -177,8 +177,7 @@ export function SmartDraftForm({ autoFocus = false, onCreated }: SmartDraftFormP
                 style={{ borderColor: course.color }}
               >
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: course.color }} />
-                <span className="font-semibold">{course.code}</span>
-                <span className="text-on-surface-variant">{course.name}</span>
+                <span className="font-semibold">{course.name}</span>
               </button>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../api/tasks.api';
-import { insertEntityInCaches, isOfflineMutationResult, removeEntityFromCaches } from '../sync/offlineCaches';
+import { insertEntityInCaches, isOfflineMutationResult, removeEntityFromCaches, withPendingActions } from '../sync/offlineCaches';
+import { useSyncStore } from '../stores/syncStore';
 import type { Task } from '../types';
 
 // Clés de cache — un seul endroit pour les nommer
@@ -9,11 +10,20 @@ export const taskKeys = {
     board: ['tasks', 'board'] as const,
 };
 
+// Vérité locale : toute action encore en file est superposée au snapshot serveur
+// (refetch, pull, restauration). Une tâche PENDING reste donc visible tant que
+// son push n'a pas abouti — plus jamais « écrasée » par le contenu serveur.
+const withPendingTasks = (tasks: Task[] | undefined): Task[] =>
+    withPendingActions(tasks, 'Task', useSyncStore.getState().queue, (id, payload) =>
+        buildOptimisticTask(id, payload),
+    );
+
 export const useTasks = () => {
     return useQuery({
         queryKey: taskKeys.all,
         queryFn: tasksApi.getAll,
         staleTime: 30_000,
+        select: withPendingTasks,
     });
 };
 
@@ -21,6 +31,7 @@ export const useBoardTasks = () => {
     return useQuery({
         queryKey: taskKeys.board,
         queryFn: tasksApi.getBoard,
+        select: withPendingTasks,
     });
 };
 

@@ -96,6 +96,31 @@ const extractRemoteIdFromUrl = (url: string | undefined): string | undefined => 
   return match?.[1];
 };
 
+// La file de sync ne sait rejouer que les mutations CRUD canoniques des
+// 5 entités synchronisables : POST sur la collection, PATCH/PUT/DELETE sur
+// une instance. Toute sous-route d'action (start/pause/complete/reorder/
+// board/search/work-types/average/recalculate-points…) n'est PAS une
+// mutation d'entité réplicable : hors ligne elle échoue simplement, sans
+// polluer la file avec de faux CREATE/UPDATE que le backend rejetterait.
+const SYNC_ACTION_SEGMENT_RE =
+  /^(?:start|pause|complete|reorder|board|search|init|average|statistics|work-types|recalculate-points|sync-history)$/i;
+
+const isSyncableMutation = (method: string | undefined, url: string | undefined): boolean => {
+  if (!url) return false;
+  const m = method?.toLowerCase();
+  if (!m || !['post', 'put', 'patch', 'delete'].includes(m)) return false;
+
+  const match = url.match(/^\/?(tasks|events|grades|works|courses)(?:\/([^/?#]+))?/i);
+  if (!match) return false;
+
+  const segment = match[2];
+  if (segment && SYNC_ACTION_SEGMENT_RE.test(segment)) return false;
+
+  // POST sans segment = création de collection ; segment = mutation d'instance.
+  if (!segment) return m === 'post';
+  return m === 'patch' || m === 'put' || m === 'delete';
+};
+
 // Demande au service worker de vider la file même si l'onglet est fermé.
 const requestBackgroundSync = () => {
   try {
@@ -133,7 +158,7 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
+      if (isSyncableMutation(config.method as string, config.url as string)) {
 
         const payload = config.data ? JSON.parse(config.data as string) : undefined;
         // Identité cohérente pour toute la vie de la mutation :
@@ -145,9 +170,12 @@ apiClient.interceptors.response.use(
           ?? crypto.randomUUID();
 
         const syncPayload = {
-          type: methodToSyncType(config.method),
+          type: methodToSyncType(config.method as string),
           entity: extractEntityFromUrl(config.url),
-          data: { ...payload, id: identity },
+          // localId est aussi transmis DANS data : le backend le stocke dans
+          // la colonne dédiée (Task/Event/Grade/Work) pour le remap
+          // offline→online multi-appareils.
+          data: { ...payload, id: identity, localId: identity },
           deviceId: getDeviceId(),
           localId: identity,
         };
