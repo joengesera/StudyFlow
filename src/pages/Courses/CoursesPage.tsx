@@ -1,33 +1,34 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueries } from '@tanstack/react-query';
 import { useCourses } from '../../hooks/useCourses';
 import { useGrades } from '../../hooks/useGrades';
 import { useTasks } from '../../hooks/useTasks';
 import { useEvents } from '../../hooks/useEvents';
-import { useRisk } from '../../hooks/useRisks';
+import { riskKeys } from '../../hooks/useRisks';
+import { riskApi } from '../../api/risk.api';
 import { pointsAverage } from '../../utils/pointsEngine';
-import { riskScoreStyles } from '../../utils/risk';
-import type { Course, Task, Event } from '../../types';
+import { riskScoreStyles, riskLevelLabel } from '../../utils/risk';
+import type { Course, Task, Event, RiskLevel } from '../../types';
 import CourseFormModal from '../../components/Courses/CourseFormModal';
 
 interface CourseCardProps {
   course: Course;
   tasks: Task[];
   events: Event[];
+  riskLevel: RiskLevel;
   onClick: (id: string) => void;
 }
 
-const CourseCard = ({ course, tasks, events, onClick }: CourseCardProps) => {
+const CourseCard = ({ course, tasks, events, riskLevel, onClick }: CourseCardProps) => {
   const { data: grades = [] } = useGrades(course.id);
-  const { data: risk } = useRisk(course.id);
 
   const courseTasks = tasks.filter(t => t.courseId === course.id && !t.isDeleted);
   const courseEvents = events.filter(e => e.courseId === course.id);
 
   const average = grades.length === 0 ? null : pointsAverage(grades);
 
-  const riskLevel = risk?.level || 'LOW';
-  const rStyle = riskScoreStyles(risk?.overallScore ?? 0);
+  const rStyle = riskScoreStyles(riskLevel === 'LOW' ? 0 : riskLevel === 'MEDIUM' ? 40 : 75);
 
   const progressValue = average !== null ? Math.min(average * 5, 100) : 0;
 
@@ -66,7 +67,7 @@ const CourseCard = ({ course, tasks, events, onClick }: CourseCardProps) => {
         </div>
         <div className={`px-2 py-1 rounded ${rStyle.bg} ${rStyle.text} border border-outline-variant text-label-caps font-label-caps flex items-center gap-1`}>
           <span className={`w-1.5 h-1.5 rounded-full ${rStyle.dot}`} />
-          {riskLevel === 'LOW' ? 'FAIBLE' : riskLevel === 'MEDIUM' ? 'MOYEN' : 'ÉLEVÉ'}
+          {riskLevelLabel(riskLevel)}
         </div>
       </div>
       <div className="mb-4">
@@ -105,13 +106,30 @@ export default function CoursesPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [riskFilter, setRiskFilter] = useState('Tous');
+  const [riskFilter, setRiskFilter] = useState<'Tous' | 'Critiques'>('Tous');
 
   const activeCourses = courses.filter((c) => !c.isDeleted);
+
+  const riskQueries = useQueries({
+    queries: activeCourses.map((course) => ({
+      queryKey: riskKeys.course(course.id),
+      queryFn: () => riskApi.getCourseRisk(course.id),
+      enabled: !!course.id,
+    })),
+  });
+  const riskLevelByCourse = useMemo(() => {
+    const map = new Map<string, string>();
+    activeCourses.forEach((course, i) => {
+      map.set(course.id, riskQueries[i]?.data?.level ?? 'LOW');
+    });
+    return map;
+  }, [activeCourses, riskQueries]);
+
   const filteredCourses = activeCourses.filter(course => {
     const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRisk = riskFilter === 'Tous' || (course as { riskLevel?: string }).riskLevel === riskFilter;
+    const level = riskLevelByCourse.get(course.id);
+    const matchesRisk = riskFilter === 'Tous' || level === 'HIGH' || level === 'CRITICAL';
     return matchesSearch && matchesRisk;
   });
 
@@ -191,6 +209,7 @@ export default function CoursesPage() {
                 course={course}
                 tasks={tasks}
                 events={events}
+                riskLevel={(riskLevelByCourse.get(course.id) as RiskLevel) ?? 'LOW'}
                 onClick={(id) => navigate(`/courses/${id}`)}
               />
             ))}

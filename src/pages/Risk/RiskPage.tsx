@@ -3,7 +3,7 @@ import { useQueries } from '@tanstack/react-query';
 import { riskApi } from '../../api/risk.api';
 import { useCourses } from '../../hooks/useCourses';
 import { riskKeys } from '../../hooks/useRisks';
-import { riskScoreStyles, riskScoreColor } from '../../utils/risk';
+import { riskScoreStyles, riskScoreColor, riskLevelLabel } from '../../utils/risk';
 import type { Course, RiskAnalysis } from '../../types';
 
 const GlobalSummary = ({ risks }: { risks: (RiskAnalysis | undefined)[] }) => {
@@ -84,7 +84,7 @@ const RiskCard = ({ course, risk, onClick }: { course: Course; risk: RiskAnalysi
         </div>
         <div className="flex items-center gap-3">
           <span className="text-headline-md font-headline-md text-on-surface">{risk.overallScore}</span>
-          <span className={`px-2 py-1 rounded text-label-caps font-label-caps ${theme.bg} ${theme.text}`}>{risk.level}</span>
+          <span className={`px-2 py-1 rounded text-label-caps font-label-caps ${theme.bg} ${theme.text}`}>{riskLevelLabel(risk.level)}</span>
         </div>
       </div>
 

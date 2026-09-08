@@ -21,3 +21,11 @@ export const riskScoreColor = (score: number): string => {
   if (tier === 'orange') return 'var(--color-warning)';
   return 'var(--color-error)';
 };
+
+export const riskLevelLabel = (level: string): string => {
+  if (level === 'LOW') return 'Faible';
+  if (level === 'MEDIUM') return 'Moyen';
+  if (level === 'CRITICAL') return 'Critique';
+  if (level === 'HIGH') return 'Élevé';
+  return level;
+};

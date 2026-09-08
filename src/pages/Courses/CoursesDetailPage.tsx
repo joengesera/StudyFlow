@@ -8,7 +8,7 @@ import { useEvents } from '../../hooks/useEvents';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useRisk } from '../../hooks/useRisks';
 import { pointsAverage, type PointItem } from '../../utils/pointsEngine';
-import { riskScoreStyles } from '../../utils/risk';
+import { riskScoreStyles, riskLevelLabel } from '../../utils/risk';
 import CourseFormModal from '../../components/Courses/CourseFormModal';
 import type { Grade } from '../../types';
 
@@ -435,7 +435,7 @@ const RiskTab = ({ courseId }: { courseId: string }) => {
           </div>
         </div>
         <span className={`px-3 py-1 rounded text-label-caps font-label-caps ${rStyle.bg} ${rStyle.text}`}>
-          {risk.level}
+          {riskLevelLabel(risk.level)}
         </span>
       </div>
 
@@ -534,7 +534,7 @@ export default function CourseDetailPage() {
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <span className={`px-3 py-1 rounded text-label-caps font-label-caps ${rStyle.bg} ${rStyle.text}`}>
-            {riskLevel}
+            {riskLevelLabel(riskLevel)}
           </span>
           <button
             onClick={() => setShowEditModal(true)}
@@ -577,7 +577,7 @@ export default function CourseDetailPage() {
             <span className="material-symbols-outlined text-error">shield</span>
             <span className="text-label-caps font-label-caps text-on-surface-variant">Risque</span>
           </div>
-          <div className="text-display-lg font-display-lg ${riskScoreStyles(risk?.overallScore ?? 0).text}">{Math.round(risk?.overallScore || 0)}</div>
+          <div className={`text-display-lg font-display-lg ${riskScoreStyles(risk?.overallScore ?? 0).text}`}>{Math.round(risk?.overallScore || 0)}</div>
         </div>
       </div>
 
