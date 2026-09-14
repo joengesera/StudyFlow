@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { addDays, addMinutes, addMonths, addWeeks, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarDays, Clock, MapPin, Repeat2, Save, X } from 'lucide-react';
@@ -214,14 +214,25 @@ export function CreateEventModal({
     onCreate(payloads);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm modal-backdrop"
       onClick={onClose}
     >
       <div
-        className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl"
+        className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl modal-panel"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ajouter un événement"
       >
         <div className="flex items-start justify-between mb-6">
           <div>
@@ -243,7 +254,7 @@ export function CreateEventModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="text-label-sm font-label-sm text-on-surface-variant mb-2 block">
               Titre
             </label>
@@ -257,7 +268,7 @@ export function CreateEventModal({
             />
           </section>
 
-          <section className="card card-padded space-y-4">
+          <section className="field-section space-y-4">
             <div>
               <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">
                 Type
@@ -312,7 +323,7 @@ export function CreateEventModal({
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <div className="flex items-center justify-between mb-3">
               <label className="text-label-caps font-label-caps text-on-surface-variant">
                 {isAllDay ? 'Date' : 'Horaires'}
@@ -439,7 +450,7 @@ export function CreateEventModal({
             )}
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">
               Lieu <span className="text-on-surface-variant/60">(optionnel)</span>
             </label>
@@ -454,7 +465,7 @@ export function CreateEventModal({
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="flex items-center gap-3 cursor-pointer">
               <button
                 type="button"

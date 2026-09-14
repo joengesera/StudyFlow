@@ -1,5 +1,5 @@
 import { Trash2, FileText, MapPin, FileEdit, Clock, X, Save } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { Event } from '../../../types';
@@ -43,9 +43,17 @@ export function EventModal({
     onClose();
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm modal-backdrop" onClick={onClose}>
+      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl modal-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={editing ? "Modifier l'événement" : event.title}>
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-label-caps font-label-caps text-on-surface-variant mb-1">
@@ -70,13 +78,14 @@ export function EventModal({
 
         {editing ? (
           <form onSubmit={handleSave} className="space-y-5">
-            <section className="card card-padded space-y-4">
+            <section className="field-section space-y-4">
               <div>
                 <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Titre</label>
                 <input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
+                  autoFocus
                   className="input input-bordered w-full h-12 text-base"
                 />
               </div>
@@ -101,7 +110,7 @@ export function EventModal({
               </div>
             </section>
 
-            <section className="card card-padded">
+            <section className="field-section">
               <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 flex items-center gap-2">
                 <Clock className="text-[14px]" /> Horaires
               </label>
@@ -129,7 +138,7 @@ export function EventModal({
               </div>
             </section>
 
-            <section className="card card-padded space-y-4">
+            <section className="field-section space-y-4">
               <div>
                 <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 flex items-center gap-1.5">
                   <MapPin className="text-[14px]" /> Lieu
@@ -170,7 +179,7 @@ export function EventModal({
           </form>
         ) : (
           <>
-            <div className="space-y-4 text-body-md font-body-md text-on-surface card card-padded">
+            <div className="space-y-4 text-body-md font-body-md text-on-surface field-section">
               <div className="flex gap-3 items-start">
                 <Clock className="text-on-surface-variant mt-0.5 shrink-0" />
                 <div>

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { addDays, startOfWeek } from 'date-fns';
 import { Clock, Trash2, Plus, Palette, Save, X } from 'lucide-react';
 import { useCreateCourse, useUpdateCourse, useDeleteCourse, useCourses } from '../../hooks/useCourses';
@@ -74,6 +74,14 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
   ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -176,10 +184,13 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm modal-backdrop" onClick={onClose}>
       <div
-        className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl"
+        className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl modal-panel"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEditMode ? "Modifier le cours" : "Nouveau cours"}
       >
         <div className="flex items-start justify-between mb-6">
           <div>
@@ -196,10 +207,10 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="card card-padded space-y-4">
+          <section className="field-section space-y-4">
             <div>
               <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Nom du cours</label>
-              <input name="name" value={form.name} onChange={handleChange} placeholder="ex: Algorithmique" required className="input input-bordered w-full h-12 text-base" />
+              <input name="name" value={form.name} onChange={handleChange} placeholder="ex: Algorithmique" required autoFocus className="input input-bordered w-full h-12 text-base" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -213,7 +224,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="text-label-caps font-label-caps text-on-surface-variant mb-3 flex items-center gap-2">
               <Palette className="text-[16px]" /> Couleur
             </label>
@@ -240,7 +251,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
           </section>
 
           {!isEditMode && (
-            <section className="card card-padded">
+            <section className="field-section">
               <label className="flex items-center gap-3 cursor-pointer">
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 import { X, Trash2, CalendarDays, Save, Clock } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useMemo, useState } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import type { Event, Task } from '../../../types';
 
 interface TaskModalProps {
@@ -59,9 +59,17 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
     onClose();
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm modal-backdrop">
+      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl modal-panel" role="dialog" aria-modal="true" aria-label="Modifier la tâche">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-label-caps font-label-caps text-on-surface-variant mb-1">Édition rapide</p>
@@ -73,12 +81,12 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
         </div>
 
         <div className="space-y-5">
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="text-label-sm font-label-sm text-on-surface-variant mb-2 block">Titre</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className={fieldClassName} />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus className={fieldClassName} />
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Priorité</label>
@@ -101,14 +109,14 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <div className="flex items-center justify-between mb-2">
               <label className="text-label-caps font-label-caps text-on-surface-variant">Échéance</label>
               {dueDate && (
                 <button type="button" onClick={() => setDueDate('')} className="btn btn-text text-error text-label-sm">Effacer</button>
               )}
             </div>
-            <div className="card card-padded">
+            <div className="rounded-md bg-surface-container-low px-4 py-3">
               <div className="flex items-center gap-2 text-body-md font-body-md text-on-surface mb-3">
                 <CalendarDays className="text-on-surface-variant" />
                 <span>{dueDate ? format(new Date(dueDate), 'EEEE d MMMM, HH:mm', { locale: fr }) : 'Aucune date définie'}</span>
@@ -131,7 +139,7 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Événement lié</label>
             <select value={eventId} onChange={(e) => setEventId(e.target.value)} className={fieldClassName}>
               <option value="">Aucun événement</option>

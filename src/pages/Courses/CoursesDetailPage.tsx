@@ -218,13 +218,14 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
             </div>
           </div>
 
-          <section className="card card-padded space-y-4">
+          <section className="field-section space-y-4">
             <div>
               <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Nom de la note</label>
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
+                autoFocus
                 className="input input-bordered w-full h-12 text-base"
                 placeholder="ex: Examen Mi-Semestre"
               />
@@ -255,7 +256,7 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Type de note</label>
@@ -284,7 +285,7 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
             <button
               type="button"
               onClick={() => { setShowForm(false); setEditingGrade(null); resetForm(); }}
-              className="btn btn-text text-on-surface-variant"
+              className="btn btn-outlined"
             >
               Annuler
             </button>

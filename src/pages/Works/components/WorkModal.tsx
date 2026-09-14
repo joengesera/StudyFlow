@@ -76,9 +76,17 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
 
   const selectedCourse = courses.find((c) => c.id === form.courseId);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm modal-backdrop" onClick={onClose}>
+      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl modal-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={work ? "Modifier le travail" : "Nouveau travail"}>
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-label-caps font-label-caps text-on-surface-variant mb-1">
@@ -94,7 +102,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Cours</label>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Choix du cours">
               {courses.map((course) => (
@@ -121,7 +129,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
             )}
           </section>
 
-          <section className="card card-padded space-y-4">
+          <section className="field-section space-y-4">
             <div>
               <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Titre</label>
               <input
@@ -129,6 +137,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
                 placeholder="ex: Rapport de projet"
                 className="input input-bordered w-full h-12 text-base"
                 value={form.title}
+                autoFocus
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
             </div>
@@ -153,7 +162,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Barème</label>
@@ -180,7 +189,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
             </div>
           </section>
 
-          <section className="card card-padded">
+          <section className="field-section">
             <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Statut</label>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Statut du travail">
               {statusOptions.map((option) => (
