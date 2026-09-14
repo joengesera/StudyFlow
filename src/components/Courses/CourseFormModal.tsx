@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { addDays, startOfWeek } from 'date-fns';
-import { Clock, Trash2, Plus, Palette, Save, X } from 'lucide-react';
+import { Clock, Trash2, Plus, Save, X } from 'lucide-react';
 import { useCreateCourse, useUpdateCourse, useDeleteCourse, useCourses } from '../../hooks/useCourses';
 import { useCreateEvent } from '../../hooks/useEvents';
 import type { Course, EventType } from '../../types';
@@ -16,11 +16,6 @@ const WEEK_DAYS = [
 ];
 
 const SLOT_TYPES = ['CM', 'TD', 'TP'];
-
-const PRESET_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280', '#14b8a6',
-];
 
 interface TimeSlot {
   id: string;
@@ -221,32 +216,6 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                 <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Crédits</label>
                 <input name="credits" type="number" min={1} max={10} value={form.credits} onChange={handleChange} className="input input-bordered w-full h-12 text-base" />
               </div>
-            </div>
-          </section>
-
-          <section className="field-section">
-            <label className="text-label-caps font-label-caps text-on-surface-variant mb-3 flex items-center gap-2">
-              <Palette className="text-[16px]" /> Couleur
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, color }))}
-                  className={`w-9 h-9 rounded-full transition-all ${form.color === color ? 'ring-2 ring-offset-2 ring-primary scale-110' : 'hover:scale-105'}`}
-                  style={{ background: color }}
-                  aria-label={`Couleur ${color}`}
-                />
-              ))}
-              <button
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, color: generateRandomCourseColor(existingCourses.map((c) => c.color)) }))}
-                className="w-9 h-9 rounded-full border-2 border-dashed border-outline-variant hover:border-on-surface-variant transition-colors flex items-center justify-center text-on-surface-variant"
-                aria-label="Couleur aléatoire"
-              >
-                <Plus className="text-[16px]" />
-              </button>
             </div>
           </section>
 
