@@ -278,12 +278,21 @@
   }
 
   /* Les champs daisyUI ont un fond piloté par --color-base-100 (data-theme) ;
-     on aligne leur texte sur le même jeton pour que la saisie soit toujours
-     lisible, même si la classe .dark et l'attribut data-theme se désynchronisent. */
+     on aligne leur texte ET fond sur les mêmes jetons pour que la saisie soit
+     toujours lisible, même si la classe .dark et l'attribut data-theme se
+     désynchronisent. */
   input,
   select,
   textarea {
     color: var(--color-base-content);
+    background-color: var(--color-base-100);
+  }
+
+  .dark input,
+  .dark select,
+  .dark textarea {
+    color: var(--color-base-content);
+    background-color: var(--color-base-100);
   }
 
   input::placeholder,

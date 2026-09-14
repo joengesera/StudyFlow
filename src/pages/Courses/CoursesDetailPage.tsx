@@ -1,4 +1,4 @@
-import { Star, CheckSquare, ClipboardList, Calendar, BarChart3, CalendarDays, FileEdit, GraduationCap, ArrowLeft, Check, X, Plus, Shield } from 'lucide-react';
+import { Star, CheckSquare, ClipboardList, Calendar, BarChart3, CalendarDays, FileEdit, GraduationCap, ArrowLeft, Check, X, Plus, Shield, Save } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -206,87 +206,100 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
 
       {/* Add / Edit Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card card-padded space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="text-label-caps font-label-caps text-on-surface-variant">
-              {editingGrade ? `Modifier : ${editingGrade.name}` : 'Nouvelle note'}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-label-caps font-label-caps text-on-surface-variant mb-1">
+                {editingGrade ? 'Modification' : 'Création'}
+              </p>
+              <h3 className="text-headline-sm font-headline-sm text-on-surface">
+                {editingGrade ? `Modifier : ${editingGrade.name}` : 'Nouvelle note'}
+              </h3>
             </div>
-            {editingGrade && (
-              <span className="px-2.5 py-0.5 rounded text-label-caps font-label-caps bg-surface-container-highest text-on-surface-variant">
-                Édition
-              </span>
-            )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="col-span-2">
-              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Nom</label>
+
+          <section className="card card-padded space-y-4">
+            <div>
+              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Nom de la note</label>
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
                 className="input input-bordered w-full h-12 text-base"
-                placeholder="Ex: Examen Mi-Semestre"
+                placeholder="ex: Examen Mi-Semestre"
               />
             </div>
-            <div>
-              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Note</label>
-              <input
-                type="number"
-                step="0.5"
-                value={form.score}
-                onChange={(e) => setForm({ ...form, score: e.target.value })}
-                required
-                min={0}
-                className="input input-bordered w-full h-12 text-base"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Note</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={form.score}
+                  onChange={(e) => setForm({ ...form, score: e.target.value })}
+                  required
+                  min={0}
+                  className="input input-bordered w-full h-12 text-base"
+                />
+              </div>
+              <div>
+                <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Sur</label>
+                <input
+                  type="number"
+                  value={form.maxScore}
+                  onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
+                  min={1}
+                  className="input input-bordered w-full h-12 text-base"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Sur</label>
-              <input
-                type="number"
-                value={form.maxScore}
-                onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
-                min={1}
-                className="input input-bordered w-full h-12 text-base"
-              />
+          </section>
+
+          <section className="card card-padded">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Type de note</label>
+                <select
+                  value={currentTypeValue}
+                  onChange={(e) => setForm({ ...form, workTypeLabel: e.target.value })}
+                  className="input input-bordered w-full h-12 text-base"
+                >
+                  {workTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Pondération</label>
+                <input
+                  readOnly
+                  value={weightPercentToTwenty(workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent)}
+                  className="input w-full h-12 text-base bg-surface-container"
+                />
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Type de note</label>
-              <select
-                value={currentTypeValue}
-                onChange={(e) => setForm({ ...form, workTypeLabel: e.target.value })}
-                className="input input-bordered w-full h-12 text-base"
-              >
-                {workTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Pondération appliquée</label>
-              <input
-                readOnly
-                value={weightPercentToTwenty(workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent)}
-                className="input w-full h-12 text-base bg-surface-container"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-2 border-t border-outline-variant">
+          </section>
+
+          <div className="flex justify-between items-center pt-4 border-t border-outline-variant">
             <button
               type="button"
-              onClick={() => {
-                setShowForm(false);
-                setEditingGrade(null);
-                resetForm();
-              }}
-              className="btn btn-outlined"
+              onClick={() => { setShowForm(false); setEditingGrade(null); resetForm(); }}
+              className="btn btn-text text-on-surface-variant"
             >
               Annuler
             </button>
-            <button type="submit" disabled={isCreating || isUpdating} className="btn btn-primary">
-              {isCreating || isUpdating ? 'Enregistrement...' : editingGrade ? 'Enregistrer les modifications' : 'Enregistrer'}
+            <button type="submit" disabled={isCreating || isUpdating} className="btn btn-primary min-w-[160px]">
+              {isCreating || isUpdating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="loading loading-spinner loading-sm" />
+                  Enregistrement...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Save className="text-[18px]" />
+                  {editingGrade ? 'Enregistrer' : 'Ajouter'}
+                </span>
+              )}
             </button>
           </div>
         </form>
