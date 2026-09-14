@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { isAxiosError } from 'axios';
+import { isApiError } from '../../api/client';
 import logo from '@/assets/Fichier1.svg';
 
 export default function RegisterPage() {
@@ -89,7 +89,7 @@ export default function RegisterPage() {
     });
   };
 
-  const backendError = registerError && isAxiosError(registerError)
+  const backendError = registerError && isApiError(registerError)
     ? registerError.response?.data?.error?.message ?? 'Une erreur est survenue.'
     : null;
 

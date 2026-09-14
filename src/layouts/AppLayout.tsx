@@ -1,29 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Menu, Sparkles, LayoutDashboard, GraduationCap, Calendar, CheckSquare, ClipboardList, BarChart3, Settings, CircleUser, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSyncStore } from '../stores/syncStore';
 import { useNetworkSync } from '../hooks/useNetworkSync';
-import { SyncStatus } from '../components/SyncStatus/SyncStatus';
-import { SmartCreateModal } from '../components/smart/SmartCreateModal';
-import { ToastHost } from '../components/ToastHost';
-import { NotificationCenter } from '../components/NotificationCenter/NotificationCenter';
 import { useLocalNotifications } from '../hooks/useLocalNotifications';
 import { getInitials } from '../utils/initials';
 import logo from '@/assets/Fichier1.svg';
 
+const SyncStatus = lazy(() =>
+  import('../components/SyncStatus/SyncStatus').then((m) => ({ default: m.SyncStatus })),
+);
+const ThemeToggle = lazy(() =>
+  import('../components/ThemeToggle').then((m) => ({ default: m.ThemeToggle })),
+);
+const NotificationCenter = lazy(() =>
+  import('../components/NotificationCenter/NotificationCenter').then((m) => ({
+    default: m.NotificationCenter,
+  })),
+);
+const SmartCreateModal = lazy(() =>
+  import('../components/smart/SmartCreateModal').then((m) => ({ default: m.SmartCreateModal })),
+);
+const ToastHost = lazy(() =>
+  import('../components/ToastHost').then((m) => ({ default: m.ToastHost })),
+);
+
 const navItems = [
-  { to: '/dashboard', icon: 'dashboard', label: 'Tableau de bord' },
-  { to: '/courses', icon: 'school', label: 'Cours' },
-  { to: '/agenda', icon: 'calendar_month', label: 'Planning' },
-  { to: '/tasks', icon: 'task_alt', label: 'Tâches' },
-  { to: '/works', icon: 'assignment', label: 'Travaux' },
-  { to: '/risk', icon: 'analytics', label: 'Analyse de risque' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
+  { to: '/courses', icon: GraduationCap, label: 'Cours' },
+  { to: '/agenda', icon: Calendar, label: 'Planning' },
+  { to: '/tasks', icon: CheckSquare, label: 'Tâches' },
+  { to: '/works', icon: ClipboardList, label: 'Travaux' },
+  { to: '/risk', icon: BarChart3, label: 'Analyse de risque' },
 ];
 
 const bottomNavItems = [
-  { to: '/settings', icon: 'settings', label: 'Paramètres' },
-  { to: '/profile', icon: 'account_circle', label: 'Profil' },
-  { to: '/logout', icon: 'logout', label: 'Déconnexion', isLogout: true },
+  { to: '/settings', icon: Settings, label: 'Paramètres' },
+  { to: '/profile', icon: CircleUser, label: 'Profil' },
+  { to: '/logout', icon: LogOut, label: 'Déconnexion', isLogout: true },
 ];
 
 export default function AppLayout() {
@@ -122,9 +137,7 @@ export default function AppLayout() {
                 `}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <span className="material-symbols-outlined text-[20px]" data-icon={item.icon} style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
-                  {item.icon}
-                </span>
+                <item.icon className="text-[20px]" />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -141,9 +154,7 @@ export default function AppLayout() {
                   onClick={handleLogout}
                   className="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all hover:scale-[0.98] duration-200 rounded-lg w-full text-left"
                 >
-                  <span className="material-symbols-outlined text-[20px]" data-icon={item.icon}>
-                    {item.icon}
-                  </span>
+                  <item.icon className="text-[20px]" />
                   <span className="text-label-sm font-label-sm">{item.label}</span>
                 </button>
               );
@@ -158,9 +169,7 @@ export default function AppLayout() {
                 `}
                 aria-current={currentPath.startsWith(item.to) ? 'page' : undefined}
               >
-                <span className="material-symbols-outlined text-[20px]" data-icon={item.icon}>
-                  {item.icon}
-                </span>
+                <item.icon className="text-[20px]" />
                 <span className="text-label-sm font-label-sm">{item.label}</span>
               </NavLink>
             );
@@ -179,13 +188,14 @@ export default function AppLayout() {
               aria-label="Ouvrir le menu"
               aria-expanded={sidebarOpen}
             >
-              <span className="material-symbols-outlined" data-icon="menu">menu</span>
+              <Menu />
             </button>
             <h2 className="text-headline-sm font-headline-sm text-on-surface hidden md:block">{getPageTitle(activePath)}</h2>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
-            <SyncStatus />
-            <NotificationCenter />
+            <Suspense fallback={null}><SyncStatus /></Suspense>
+            <Suspense fallback={<span className="w-8 h-8 rounded-full" />}><ThemeToggle /></Suspense>
+            <Suspense fallback={<span className="w-8 h-8 rounded-full" />}><NotificationCenter /></Suspense>
             <div className="w-8 h-8 rounded-full bg-surface-container border border-outline-variant flex items-center justify-center text-[12px] font-semibold text-on-surface shrink-0" title={user?.name}>
               {getInitials(user?.name)}
             </div>
@@ -206,12 +216,12 @@ export default function AppLayout() {
         aria-label="Création intelligente de tâche ou d'événement"
         className="fixed z-40 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))] h-14 w-14 md:h-12 md:w-auto md:px-5 rounded-full bg-primary text-on-primary shadow-lg shadow-black/25 flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-xl active:scale-95"
       >
-        <span className="material-symbols-outlined text-[24px]">auto_awesome</span>
+        <Sparkles className="text-[24px]" />
         <span className="hidden md:inline text-label-lg font-label-lg font-semibold">Créer</span>
       </button>
 
-      <SmartCreateModal open={smartCreateOpen} onClose={() => setSmartCreateOpen(false)} />
-      <ToastHost />
+      <Suspense fallback={null}><SmartCreateModal open={smartCreateOpen} onClose={() => setSmartCreateOpen(false)} /></Suspense>
+      <Suspense fallback={null}><ToastHost /></Suspense>
     </div>
   );
 }

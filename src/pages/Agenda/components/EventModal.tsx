@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { Trash2, FileText, MapPin, FileEdit, Clock } from 'lucide-react';
+import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { Event } from '../../../types';
@@ -81,7 +82,7 @@ export function EventModal({
 
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">DÃ©but</label>
+                <label className="text-label-caps font-label-caps text-on-surface-variant mb-2 block">Début</label>
                 <input
                   type="datetime-local"
                   value={form.startDate}
@@ -123,25 +124,25 @@ export function EventModal({
         ) : (
           <div className="space-y-4 text-body-md font-body-md text-on-surface mt-2 mb-4 card card-padded">
             <div className="flex gap-3 items-start">
-              <span className="material-symbols-outlined text-on-surface-variant mt-0.5 shrink-0">schedule</span>
+              <Clock className="text-on-surface-variant mt-0.5 shrink-0" />
               <div>
                 <div className="font-medium">
                   {format(parseISO(event.startDate), 'EEEE d MMMM', { locale: fr })}
                 </div>
                 <div className="text-on-surface-variant">
-                  {format(parseISO(event.startDate), 'HH:mm', { locale: fr })} – {format(parseISO(event.endDate), 'HH:mm', { locale: fr })}
+                  {format(parseISO(event.startDate), 'HH:mm', { locale: fr })} � {format(parseISO(event.endDate), 'HH:mm', { locale: fr })}
                 </div>
               </div>
             </div>
             {event.location && (
               <div className="flex gap-3 items-center">
-                <span className="material-symbols-outlined text-on-surface-variant shrink-0">location_on</span>
+                <MapPin className="text-on-surface-variant shrink-0" />
                 <span>{event.location}</span>
               </div>
             )}
             {event.description && (
               <div className="flex gap-3 items-start">
-                <span className="material-symbols-outlined text-on-surface-variant mt-0.5 shrink-0">description</span>
+                <FileText className="text-on-surface-variant mt-0.5 shrink-0" />
                 <span className="whitespace-pre-line text-on-surface-variant">{event.description}</span>
               </div>
             )}
@@ -152,14 +153,14 @@ export function EventModal({
           <button
             type="button"
             onClick={() => {
-              if (confirm('Supprimer cet événement ?')) {
+              if (confirm('Supprimer cet �v�nement ?')) {
                 onDelete(event.id);
                 onClose();
               }
             }}
             className="btn btn-text text-error"
           >
-            <span className="material-symbols-outlined text-[18px]">delete</span>
+            <Trash2 className="text-[18px]" />
             Supprimer
           </button>
           <div className="flex gap-3">
@@ -172,7 +173,7 @@ export function EventModal({
               </button>
             ) : (
               <button onClick={() => setEditing(true)} className="btn btn-primary">
-                <span className="material-symbols-outlined text-[18px]">edit</span>
+                <FileEdit className="text-[18px]" />
                 Modifier
               </button>
             )}

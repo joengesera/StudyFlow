@@ -1,14 +1,6 @@
-import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 import { useSyncStore } from '../stores/syncStore';
 import { getDeviceId, extractEntityFromUrl, methodToSyncType } from '../utils/deviceId';
-
-declare module 'axios' {
-  export interface AxiosRequestConfig {
-    /** Marque une requête interne de synchronisation (à ne pas re-enfiler). */
-    _isSync?: boolean;
-  }
-}
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -41,22 +33,115 @@ const normalizeErrorPayload = (payload: unknown) => {
   };
 };
 
-export const apiClient = axios.create({
-  baseURL: BASE_URL,
-  timeout: 10000,
-  withCredentials: true, // nécessaire pour recevoir le cookie de refresh token
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+export interface ApiRequestConfig {
+  params?: Record<string, string | number | boolean | undefined>;
+  headers?: Record<string, string>;
+  data?: unknown;
+  signal?: AbortSignal;
+  timeout?: number;
+  /** Marque une requête interne de synchronisation (à ne pas re-enfiler). */
+  _isSync?: boolean;
+  _retry?: boolean;
+}
 
-const refreshClient = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  withCredentials: true
-});
+export interface ApiErrorData {
+  success?: boolean;
+  message?: string;
+  error?: { message?: string; code?: string | null };
+}
+
+export class ApiClientError extends Error {
+  code?: string;
+  config?: Pick<ApiRequestConfig, 'headers' | '_isSync' | '_retry'> & { method?: string; url?: string; data?: unknown };
+  response?: {
+    status: number;
+    data: ApiErrorData;
+  };
+
+  constructor(message: string, options?: { code?: string; config?: ApiClientError['config']; response?: ApiClientError['response'] }) {
+    super(message);
+    this.name = 'ApiClientError';
+    this.code = options?.code;
+    this.config = options?.config;
+    this.response = options?.response;
+  }
+}
+
+export const isApiError = (err: unknown): err is ApiClientError => err instanceof ApiClientError;
+
+interface ResponseBody<T> {
+  data: T;
+  status: number;
+}
+
+// ─── BUILD URL ───
+const buildUrl = (
+  url: string,
+  params?: Record<string, string | number | boolean | undefined>,
+): string => {
+  if (!params) return url;
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `${url}?${qs}` : url;
+};
+
+const NETWORK_ERROR_MESSAGE = 'Network Error';
+const NETWORK_ERROR_CODE = 'ERR_NETWORK';
+
+const isNetworkFailure = (error: unknown): boolean =>
+  error instanceof Error &&
+  (error.message === NETWORK_ERROR_MESSAGE || (error as { code?: string }).code === NETWORK_ERROR_CODE);
+
+const asNetworkError = (config: ApiRequestConfig & { method: string; url: string }): ApiClientError =>
+  new ApiClientError(NETWORK_ERROR_MESSAGE, {
+    code: NETWORK_ERROR_CODE,
+    config,
+  });
+
+// ─── FETCH CORE ───
+const doFetch = (
+  url: string,
+  method: string,
+  config: ApiRequestConfig & { data?: unknown },
+  accessToken?: string,
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), config.timeout ?? 10000);
+  const onCallerAbort = () => controller.abort();
+  config.signal?.addEventListener('abort', onCallerAbort);
+
+  const headers: Record<string, string> = { ...config.headers };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const hasBody = config.data !== undefined && method !== 'GET';
+  if (hasBody) headers['Content-Type'] = 'application/json';
+
+  return fetch(`${BASE_URL}${url}`, {
+    method,
+    headers,
+    credentials: 'include', // nécessaire pour recevoir le cookie de refresh token
+    body: hasBody ? JSON.stringify(config.data) : undefined,
+    signal: controller.signal,
+  }).finally(() => {
+    window.clearTimeout(timeoutId);
+    config.signal?.removeEventListener('abort', onCallerAbort);
+  });
+};
+
+const parseBody = async (response: Response): Promise<unknown> => {
+  if (response.status === 204) return {};
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
 
 // ─── SINGLE-FLIGHT REFRESH ───
 // Une seule requête de refresh à la fois : si plusieurs requêtes reçoivent
@@ -65,8 +150,14 @@ const refreshClient = axios.create({
 let refreshPromise: Promise<string> | null = null;
 
 const performRefresh = async (): Promise<string> => {
-  const { data } = await refreshClient.post('/auth/refresh-token');
-  const { accessToken } = unwrapApiData<{ accessToken: string }>(data);
+  const response = await fetch(`${BASE_URL}/auth/refresh-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new ApiClientError('Refresh token invalide ou expiré');
+  const body = await parseBody(response);
+  const { accessToken } = unwrapApiData<{ accessToken: string }>(body);
   useAuthStore.getState().setTokens({ accessToken });
   return accessToken;
 };
@@ -79,14 +170,6 @@ const refreshAccessToken = (): Promise<string> => {
   }
   return refreshPromise;
 };
-
-apiClient.interceptors.request.use((config) => {
-  const tokens = useAuthStore.getState().tokens;
-  if (tokens?.accessToken) {
-    config.headers.Authorization = `Bearer ${tokens.accessToken}`;
-  }
-  return config;
-});
 
 // Extrait l'id distant d'une URL du type /tasks/{id} — indispensable pour
 // que les UPDATE/DELETE mis en file ciblent la bonne entité côté backend.
@@ -136,83 +219,107 @@ const requestBackgroundSync = () => {
   }
 };
 
-interface InterceptedRequestConfig {
-  method?: string;
-  url?: string;
-  data?: string;
-  headers?: Record<string, string>;
-  _retry?: boolean;
-  _isSync?: boolean;
-}
+// Seul un échec réseau (ou l'état hors ligne) déclenche la mise en file ;
+// un rejet du serveur (4xx/5xx) reste une erreur classique.
+const handleOffline = (
+  error: unknown,
+  config: ApiRequestConfig & { method: string; url: string },
+): Promise<ResponseBody<unknown>> | null => {
+  const isOfflineCondition = isNetworkFailure(error) || !navigator.onLine;
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    // ─── OFFLINE INTERCEPTOR ───
-    if ((!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK')) || !navigator.onLine) {
-      const config = (error.config || {}) as InterceptedRequestConfig;
+  if (!isOfflineCondition) return null;
 
-      // Si c'est une requête de synchronisation (background), on rejette l'erreur directement
-      // pour éviter de l'ajouter à nouveau dans la file.
-      if (config._isSync) {
-        return Promise.reject(error);
-      }
+  // Requête interne de synchronisation (background) : on rejette pour
+  // éviter de l'ajouter à nouveau dans la file.
+  if (config._isSync) return Promise.reject(asNetworkError(config));
 
-      if (isSyncableMutation(config.method as string, config.url as string)) {
+  if (isSyncableMutation(config.method, config.url)) {
+    const payload = config.data ? (config.data as Record<string, unknown>) : undefined;
+    // Identité cohérente pour toute la vie de la mutation :
+    // id fourni par le hook (créations optimistes) > id extrait de l'URL
+    // (update/delete) > uuid fraîchement généré.
+    const identity =
+      (typeof payload?.id === 'string' ? payload.id : undefined)
+      ?? extractRemoteIdFromUrl(config.url)
+      ?? crypto.randomUUID();
 
-        const payload = config.data ? JSON.parse(config.data as string) : undefined;
-        // Identité cohérente pour toute la vie de la mutation :
-        // id fourni par le hook (créations optimistes) > id extrait de l'URL
-        // (update/delete) > uuid fraîchement généré.
-        const identity =
-          (typeof payload?.id === 'string' ? payload.id : undefined)
-          ?? extractRemoteIdFromUrl(config.url)
-          ?? crypto.randomUUID();
+    const syncPayload = {
+      type: methodToSyncType(config.method),
+      entity: extractEntityFromUrl(config.url),
+      // localId est aussi transmis DANS data : le backend le stocke dans
+      // la colonne dédiée (Task/Event/Grade/Work) pour le remap
+      // offline→online multi-appareils.
+      data: { ...payload, id: identity, localId: identity },
+      deviceId: getDeviceId(),
+      localId: identity,
+    };
 
-        const syncPayload = {
-          type: methodToSyncType(config.method as string),
-          entity: extractEntityFromUrl(config.url),
-          // localId est aussi transmis DANS data : le backend le stocke dans
-          // la colonne dédiée (Task/Event/Grade/Work) pour le remap
-          // offline→online multi-appareils.
-          data: { ...payload, id: identity, localId: identity },
-          deviceId: getDeviceId(),
-          localId: identity,
-        };
+    // On push la mutation en file d'attente (format backend)
+    useSyncStore.getState().enqueueAction(syncPayload);
+    requestBackgroundSync();
 
-        // On push la mutation en file d'attente (format backend)
-        useSyncStore.getState().enqueueAction(syncPayload);
-        requestBackgroundSync();
-
-        // Fausse réponse de succès pour éviter que l'UI plante et permettre l'Optimistic UI
-        return Promise.resolve({ data: { success: true, offline: true, _temporaryId: identity } });
-      }
-    }
-
-    // ─── RETRY 401 INTERCEPTOR ───
-    const originalRequest = error.config || {};
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        // Le refresh token est envoyé automatiquement via le cookie httpOnly.
-        const accessToken = await refreshAccessToken();
-
-        originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        return apiClient(originalRequest);
-      } catch {
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-    }
-
-    if (error.response) {
-      error.response.data = normalizeErrorPayload(error.response.data);
-    }
-
-    return Promise.reject(error);
+    // Fausse réponse de succès pour éviter que l'UI plante et permettre l'Optimistic UI
+    return Promise.resolve({ data: { success: true, offline: true, _temporaryId: identity }, status: 200 });
   }
-);
+
+  return Promise.reject(asNetworkError(config));
+};
+
+const request = async <T = unknown>(
+  method: string,
+  url: string,
+  config: ApiRequestConfig = {},
+): Promise<ResponseBody<T>> => {
+  const tokens = useAuthStore.getState().tokens;
+  const fullUrl = buildUrl(url, config.params);
+
+  let response: Response;
+  try {
+    response = await doFetch(fullUrl, method, config, tokens?.accessToken);
+  } catch (error) {
+    const offlineResult = handleOffline(error, { ...config, method, url });
+    if (offlineResult) return offlineResult as Promise<ResponseBody<T>>;
+    throw asNetworkError({ ...config, method, url });
+  }
+
+  // ─── RETRY 401 ───
+  if (response.status === 401 && !config._retry) {
+    try {
+      // Le refresh token est envoyé automatiquement via le cookie httpOnly.
+      const accessToken = await refreshAccessToken();
+      response = await doFetch(fullUrl, method, { ...config, _retry: true }, accessToken);
+    } catch {
+      useAuthStore.getState().logout();
+      window.location.href = '/login';
+      throw asNetworkError({ ...config, method, url });
+    }
+  }
+
+  const body = await parseBody(response);
+
+  if (!response.ok) {
+    // → Retourne une erreur côté serveur (le false 401 non-récupéré inclus).
+    throw new ApiClientError(`Request failed with status code ${response.status}`, {
+      config: { ...config, method, url },
+      response: {
+        status: response.status,
+        data: normalizeErrorPayload(body) as ApiErrorData,
+      },
+    });
+  }
+
+  return { data: body as T, status: response.status };
+};
+
+export const apiClient = {
+  get: <T = unknown>(url: string, config?: ApiRequestConfig): Promise<ResponseBody<T>> =>
+    request<T>('GET', url, config),
+  post: <T = unknown>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<ResponseBody<T>> =>
+    request<T>('POST', url, { ...config, data }),
+  put: <T = unknown>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<ResponseBody<T>> =>
+    request<T>('PUT', url, { ...config, data }),
+  patch: <T = unknown>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<ResponseBody<T>> =>
+    request<T>('PATCH', url, { ...config, data }),
+  delete: <T = unknown>(url: string, config?: ApiRequestConfig): Promise<ResponseBody<T>> =>
+    request<T>('DELETE', url, config),
+};

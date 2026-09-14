@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { isAxiosError } from 'axios';
+import { isApiError } from '../../api/client';
 import { useAuth } from '../../hooks/useAuth';
 import logo from '@/assets/Fichier1.svg';
 
@@ -59,7 +59,7 @@ export default function LoginPage() {
   };
 
   const backendError =
-    loginError && isAxiosError(loginError)
+    loginError && isApiError(loginError)
       ? loginError.response?.data?.error?.message ?? 'Une erreur est survenue.'
       : null;
 

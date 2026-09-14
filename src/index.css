@@ -1,7 +1,9 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* Thème clair seul : dark: devient inerte (jamais de classe .dark appliquée) */
+/* Thème piloté par la classe .dark sur <html> (voir useTheme + script anti-flash).
+   .dark est posée quand le thème résolu vaut "dark" : choix explicite ou
+   suivi du navigateur via prefers-color-scheme en mode "system". */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Thème daisyUI aligné sur la DA ChatGPT */
@@ -29,6 +31,41 @@
   --color-warning-content: #ffffff;
   --color-error: #ba1a1a;
   --color-error-content: #ffffff;
+  --radius-selector: 4px;
+  --radius-field: 5px;
+  --radius-box: 5px;
+}
+
+/* ── Palette dark "gris neutre" (alignée ChatGPT dark) ──────────────────────
+   Pas de noir pur : #212121 en fond + #171717 en profondeur (sidebar) limite
+   la fatigue oculaire des sessions du soir et garde le contraste WCAG AA
+   (texte #ececec ≈ 13,5:1, secondaire #b4b4b4 ≈ 7:1). Les boutons primaires
+   s'inversent (fond clair / texte sombre) pour garder la même hiérarchie
+   qu'en light. Statuts éclaircis pour rester lisibles sur fond sombre. */
+@plugin "daisyui/theme" {
+  name: "dark";
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: #212121;
+  --color-base-200: #171717;
+  --color-base-300: #2f2f2f;
+  --color-base-content: #ececec;
+  --color-primary: #ececec;
+  --color-primary-content: #171717;
+  --color-secondary: #b4b4b4;
+  --color-secondary-content: #171717;
+  --color-accent: #ececec;
+  --color-accent-content: #171717;
+  --color-neutral: #2f2f2f;
+  --color-neutral-content: #ececec;
+  --color-info: #7aa2ff;
+  --color-info-content: #131313;
+  --color-success: #4ade80;
+  --color-success-content: #052e16;
+  --color-warning: #fbbf24;
+  --color-warning-content: #451a03;
+  --color-error: #f87171;
+  --color-error-content: #450a0a;
   --radius-selector: 4px;
   --radius-field: 5px;
   --radius-box: 5px;
@@ -83,7 +120,7 @@
   --color-inverse-on-surface: #f7f7f8;
   --color-inverse-primary: #ececec;
 
-  /* Jetons fixed conservés pour compat dark: (inertes, thème clair seul) */
+  /* Jetons fixed : valeurs claires, surchargées sous .dark ci-dessous */
   --color-primary-fixed: #e3e3e3;
   --color-primary-fixed-dim: #b4b4b4;
   --color-on-primary-fixed: #0d0d0d;
@@ -157,6 +194,65 @@
   --text-display-lg-mobile-weight: 600;
 }
 
+/* Overrides sombres des jetons Tailwind : les utilitaires bg-background,
+   text-on-surface, border-outline-variant… basculent automatiquement dès
+   que .dark est présent, sans toucher aux composants. */
+.dark {
+  --color-primary: #ececec;
+  --color-on-primary: #171717;
+  --color-primary-container: #2f2f2f;
+  --color-on-primary-container: #ececec;
+
+  --color-secondary: #b4b4b4;
+  --color-secondary-container: #2f2f2f;
+  --color-on-secondary: #171717;
+  --color-on-secondary-container: #ececec;
+
+  --color-tertiary: #f59e0b;
+  --color-tertiary-container: #78350f;
+  --color-on-tertiary: #171717;
+  --color-on-tertiary-container: #fef3c7;
+
+  --color-error: #f87171;
+  --color-error-container: #7f1d1d;
+  --color-on-error: #450a0a;
+  --color-on-error-container: #fecaca;
+
+  /* Statuts kanban éclaircis pour fond sombre */
+  --color-status-todo: #f2994a;
+  --color-status-progress: #7aa2ff;
+  --color-status-done: #4ade80;
+
+  --color-surface: #212121;
+  --color-surface-dim: #171717;
+  --color-surface-bright: #2f2f2f;
+  --color-surface-container-lowest: #171717;
+  --color-surface-container-low: #242424;
+  --color-surface-container: #2f2f2f;
+  --color-surface-container-high: #353535;
+  --color-surface-container-highest: #424242;
+  --color-background: #212121;
+  --color-on-background: #ececec;
+  --color-outline: #424242;
+  --color-outline-variant: #2f2f2f;
+  --color-on-surface: #ececec;
+  --color-on-surface-variant: #b4b4b4;
+
+  --color-surface-tint: #ececec;
+  --color-inverse-surface: #ececec;
+  --color-inverse-on-surface: #212121;
+  --color-inverse-primary: #171717;
+
+  --color-primary-fixed: #ececec;
+  --color-primary-fixed-dim: #b4b4b4;
+  --color-on-primary-fixed: #171717;
+  --color-on-primary-fixed-variant: #e0e0e0;
+  --color-secondary-fixed: #2f2f2f;
+  --color-secondary-fixed-dim: #424242;
+  --color-on-secondary-fixed: #ececec;
+  --color-on-secondary-fixed-variant: #b4b4b4;
+}
+
 @layer base {
   :root {
     --comfort-scale: 1;
@@ -164,7 +260,11 @@
 
   html {
     font-size: calc(16px * var(--comfort-scale));
-    color-scheme: light;
+    color-scheme: light dark;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -174,15 +274,26 @@
     background: var(--color-background);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  *:focus-visible {
+  /* Les champs daisyUI ont un fond piloté par --color-base-100 (data-theme) ;
+     on aligne leur texte sur le même jeton pour que la saisie soit toujours
+     lisible, même si la classe .dark et l'attribut data-theme se désynchronisent. */
+  input,
+  select,
+  textarea {
+    color: var(--color-base-content);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: color-mix(in srgb, var(--color-base-content) 50%, transparent);
+  }
+
+*:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
-  }
-
-  .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   }
 }
 
@@ -305,6 +416,12 @@
     z-index: 1;
   }
 
+  .dark .auth-bg-tint {
+    background:
+      radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.08), transparent 58%),
+      linear-gradient(to bottom, rgb(23 23 23 / 0.82), rgb(23 23 23 / 0.9));
+  }
+
   /* Kanban Scroll */
   .kanban-scroll::-webkit-scrollbar {
     height: 8px;
@@ -331,6 +448,10 @@
 
   .btn-primary:hover {
     background-color: #2f2f2f;
+  }
+
+  .dark .btn-primary:hover {
+    background-color: #ffffff;
   }
 
   /* Variantes custom utilisees dans l'app */

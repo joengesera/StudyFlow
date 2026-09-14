@@ -1,3 +1,4 @@
+import { X, Loader2, AlertTriangle, WifiOff, UploadCloud } from 'lucide-react';
 import { useState } from 'react';
 import { useNetworkSync } from '../../hooks/useNetworkSync';
 import type { FailedSyncAction } from '../../stores/syncStore';
@@ -42,7 +43,7 @@ const FailedActionsPanel = ({
     <div className="flex items-center justify-between mb-3">
       <span className="text-label-caps font-label-caps text-on-surface-variant">Synchronisations en échec</span>
       <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface" aria-label="Fermer">
-        <span className="material-symbols-outlined text-[18px]">close</span>
+        <X className="text-[18px]" />
       </button>
     </div>
     <div className="space-y-2 mb-3">
@@ -108,7 +109,7 @@ export const SyncStatus = () => {
         role="status"
         aria-label="Hors ligne"
       >
-        <span className="material-symbols-outlined text-[16px]">wifi_off</span>
+        <WifiOff className="text-[16px]" />
         <span className="text-label-sm font-label-sm hidden sm:inline">Hors ligne</span>
       </div>
     );
@@ -121,7 +122,7 @@ export const SyncStatus = () => {
         role="status"
         aria-label="Synchronisation en cours"
       >
-        <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+        <Loader2 className="text-[16px] animate-spin" />
         <span className="text-label-sm font-label-sm hidden sm:inline">Synchronisation…</span>
       </div>
     );
@@ -136,7 +137,7 @@ export const SyncStatus = () => {
           aria-expanded={panelOpen}
           aria-label={`${failedCount} synchronisation(s) en échec`}
         >
-          <span className="material-symbols-outlined text-[16px]">sync_problem</span>
+          <AlertTriangle className="text-[16px]" />
           <span className="text-label-sm font-label-sm">{failedCount} en échec</span>
         </button>
         {panelOpen && (
@@ -160,7 +161,7 @@ export const SyncStatus = () => {
         role="status"
         aria-label={`${queueCount} modification(s) en attente de synchronisation`}
       >
-        <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+        <UploadCloud className="text-[16px]" />
         <span className="text-label-sm font-label-sm">{queueCount} en attente</span>
       </div>
     );

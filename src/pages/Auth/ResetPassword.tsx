@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { isAxiosError } from 'axios';
+import { isApiError } from '../../api/client';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authAPI } from '../../api/auth.api';
 
@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
             setForm(initialForm);
             setTimeout(() => navigate('/login'), 1200);
         } catch (err) {
-            if (isAxiosError(err)) {
+            if (isApiError(err)) {
                 setError(err.response?.data?.error?.message ?? 'Impossible de reinitialiser le mot de passe.');
             } else {
                 setError('Une erreur inattendue est survenue.');

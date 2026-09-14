@@ -1,3 +1,4 @@
+import { MapPin, CalendarX, Check } from 'lucide-react';
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -43,7 +44,7 @@ const TodayEvent = ({ event, courseName }: TodayEventProps) => {
         {courseName ? `${courseName} ` : ''}{event.title}
       </div>
       <div className="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1 mt-1">
-        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>location_on</span>
+        <MapPin />
         {event.location ?? 'Salle non définie'}
       </div>
     </div>
@@ -79,7 +80,7 @@ const TaskItem = ({ task, courseName, onToggle }: TaskItemProps) => {
           aria-label={isCompleted ? 'Marquer comme à faire' : 'Marquer comme terminé'}
         >
           {isCompleted && (
-            <span className="material-symbols-outlined text-on-primary text-[16px]">check</span>
+            <Check className="text-on-primary text-[16px]" />
           )}
         </button>
         <div>
@@ -272,7 +273,7 @@ export default function DashboardPage() {
                 ))
               ) : todayEvents.length === 0 ? (
                 <div className="text-center py-8 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-4xl mb-2 block">event_busy</span>
+                  <CalendarX className="text-4xl mb-2 block" />
                   <p className="text-body-md font-body-md">Aucun événement aujourd'hui</p>
                   <p className="text-label-sm font-label-sm mt-1">Profites-en pour avancer sur tes tâches.</p>
                 </div>

@@ -1,3 +1,4 @@
+import { RefreshCw, SkipForward } from 'lucide-react';
 import { usePomodoro } from '../../../hooks/usePomodoro';
 import { TimerRing } from '../../../components/TimerRing';
 
@@ -46,7 +47,7 @@ export const PomodoroWidget = ({ taskId, taskTitle }: PomodoroWidgetProps) => {
 
       <div className="flex gap-2 w-full mt-2">
         <button onClick={reset} className="w-10 h-10 p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors" aria-label="Réinitialiser">
-          <span className="material-symbols-outlined text-[22px]">refresh</span>
+          <RefreshCw className="text-[22px]" />
         </button>
         <button
           onClick={isRunning ? pause : start}
@@ -56,7 +57,7 @@ export const PomodoroWidget = ({ taskId, taskTitle }: PomodoroWidgetProps) => {
           {isRunning ? 'Pause' : 'Démarrer'}
         </button>
         <button onClick={skip} className="w-10 h-10 p-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors" aria-label="Passer">
-          <span className="material-symbols-outlined text-[22px]">skip_next</span>
+          <SkipForward className="text-[22px]" />
         </button>
       </div>
     </div>

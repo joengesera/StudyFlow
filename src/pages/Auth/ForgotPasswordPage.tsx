@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { isAxiosError } from 'axios';
+import { isApiError } from '../../api/client';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function ForgotPasswordPage() {
@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
             await forgotPassword(email);
             setSubmitted(true);
         } catch (err) {
-            if (isAxiosError(err)) {
+            if (isApiError(err)) {
                 setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.');
             }
         } finally {

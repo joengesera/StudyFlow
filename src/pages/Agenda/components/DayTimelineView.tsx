@@ -1,3 +1,4 @@
+import { MapPin, CalendarX } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addDays, format, isSameDay, isToday, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -195,7 +196,7 @@ export function DayTimelineView({
       {/* Timeline verticale */}
       {timedEvents.length === 0 ? (
         <div className="text-center py-12">
-          <span className="material-symbols-outlined text-4xl mb-2 block text-outline">event_busy</span>
+          <CalendarX className="text-4xl mb-2 block text-outline" />
           <p className="text-body-md font-body-md text-on-surface-variant">Aucun événement pour cette journée.</p>
         </div>
       ) : (
@@ -266,7 +267,7 @@ export function DayTimelineView({
                   )}
                   {event.location && height >= 98 && (
                     <span className="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1 mt-0.5 truncate">
-                      <span className="material-symbols-outlined text-[12px] shrink-0">location_on</span>
+                      <MapPin className="text-[12px] shrink-0" />
                       {event.location}
                     </span>
                   )}

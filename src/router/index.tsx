@@ -4,7 +4,6 @@ import { lazy, Suspense } from 'react';
 import AppLayout from '../layouts/AppLayout';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
 
-
 const LoginPage = lazy(() => import('../pages/Auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/Auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/Auth/ForgotPasswordPage'));

@@ -1,3 +1,4 @@
+import { FileEdit, GraduationCap, MoreVertical, Search, Calendar, CheckSquare, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
@@ -23,7 +24,8 @@ interface CourseCardProps {
 const CourseCard = ({ course, tasks, events, riskLevel, onClick }: CourseCardProps) => {
   const { data: grades = [] } = useGrades(course.id);
 
-  const courseTasks = tasks.filter(t => t.courseId === course.id && !t.isDeleted);
+  const courseEventIds = new Set(events.filter(e => e.courseId === course.id).map(e => e.id));
+  const courseTasks = tasks.filter(t => !t.isDeleted && (t.courseId === course.id || (t.eventId != null && courseEventIds.has(t.eventId))));
   const courseEvents = events.filter(e => e.courseId === course.id);
 
   const average = grades.length === 0 ? null : pointsAverage(grades);
@@ -54,7 +56,7 @@ const CourseCard = ({ course, tasks, events, riskLevel, onClick }: CourseCardPro
           </div>
         </div>
         <button className="text-outline hover:text-on-surface" aria-label="Plus d'options">
-          <span className="material-symbols-outlined text-sm">more_vert</span>
+          <MoreVertical className="text-sm" />
         </button>
       </div>
       <div className="border-t border-outline-variant py-4 my-2 flex justify-between items-center">
@@ -80,9 +82,9 @@ const CourseCard = ({ course, tasks, events, riskLevel, onClick }: CourseCardPro
         </div>
       </div>
       <div className="mt-auto flex justify-between text-label-sm font-label-sm text-on-surface-variant pt-2 border-t border-outline-variant">
-        <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">edit_document</span> {grades.length} notes</div>
-        <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">task_alt</span> {courseTasks.length} tâches</div>
-        <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">event</span> {courseEvents.length} évènements</div>
+        <div className="flex items-center gap-1"><FileEdit className="text-[16px]" /> {grades.length} notes</div>
+        <div className="flex items-center gap-1"><CheckSquare className="text-[16px]" /> {courseTasks.length} tâches</div>
+        <div className="flex items-center gap-1"><Calendar className="text-[16px]" /> {courseEvents.length} évènements</div>
       </div>
     </div>
   );
@@ -93,7 +95,7 @@ const AddCourseCard = ({ onClick }: { onClick: () => void }) => (
     onClick={onClick}
     className="card cursor-pointer border-dashed border-outline-variant flex flex-col items-center justify-center min-h-[200px] hover:border-primary transition-colors group"
   >
-    <span className="material-symbols-outlined text-4xl text-outline mb-2 group-hover:text-primary transition-colors">add</span>
+    <Plus className="text-4xl text-outline mb-2 group-hover:text-primary transition-colors" />
     <p className="text-body-md font-body-md text-on-surface-variant text-center">Ajouter un cours</p>
   </div>
 );
@@ -143,7 +145,7 @@ export default function CoursesPage() {
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-none">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm" />
             <input
               type="text"
               placeholder="Rechercher..."
@@ -189,7 +191,7 @@ export default function CoursesPage() {
           ))
         ) : filteredCourses.length === 0 ? (
           <div className="col-span-full border border-dashed border-outline-variant rounded-lg p-12 flex flex-col items-center justify-center text-center">
-            <span className="material-symbols-outlined text-4xl text-outline mb-4">school</span>
+            <GraduationCap className="text-4xl text-outline mb-4" />
             <h3 className="text-headline-sm font-headline-sm text-on-surface mb-2">Aucun cours trouvé</h3>
             <p className="text-body-md font-body-md text-on-surface-variant max-w-md mb-6">
               Il semble que vous n'ayez pas encore ajouté de cours à votre semestre, ou qu'aucun cours ne corresponde à vos filtres.

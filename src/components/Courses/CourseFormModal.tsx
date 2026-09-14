@@ -29,6 +29,32 @@ interface CourseFormModalProps {
     onClose: () => void;
 }
 
+// Classes partagées : alignées sur les tokens du thème (light/dark), au lieu
+// des couleurs en dur qui rendaient le modal illisible en mode sombre.
+const labelCls = 'text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 block';
+const inputCls = 'w-full h-[46px] px-4 rounded-xl border border-outline-variant text-[15px] font-medium text-on-surface outline-none focus:border-on-surface-variant transition-colors bg-surface';
+const divider = 'w-full h-px bg-outline-variant';
+
+function TimeField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+    return (
+        <div>
+            <label className="text-[11px] font-medium text-on-surface-variant mb-1.5 block">{label}</label>
+            <div className="relative flex items-center bg-surface border border-outline-variant rounded-lg h-10 pl-3 pr-2 focus-within:border-on-surface-variant transition-colors">
+                <svg className="w-4 h-4 text-on-surface-variant shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 7v5l3 2" />
+                </svg>
+                <input
+                    type="time"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-full min-w-0 bg-transparent outline-none text-[14px] font-medium text-on-surface px-2"
+                />
+            </div>
+        </div>
+    );
+}
+
 export default function CourseFormModal({ course, onClose }: CourseFormModalProps) {
     const isEditMode = !!course;
     const { mutateAsync: createCourse, isPending: isCreatingCourse } = useCreateCourse();
@@ -160,16 +186,16 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
 
     return (
         <div className="fixed inset-0 z-[100] flex justify-center items-center p-4 sm:p-6 bg-black/30 backdrop-blur-[2px]">
-            <div className="bg-white w-full max-w-[560px] max-h-[95vh] overflow-y-auto rounded-lg p-8 shadow-2xl relative scrollbar-hide">
-                
-                <h2 className="text-[22px] font-bold text-[#1A1A1A] mb-8">
+            <div className="bg-surface w-full max-w-[560px] max-h-[95vh] overflow-y-auto rounded-lg p-8 shadow-2xl relative scrollbar-hide">
+
+                <h2 className="text-[22px] font-bold text-on-surface mb-8">
                     {isEditMode ? 'Modifier le cours' : 'Nouveau cours'}
                 </h2>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                     {/* TOP SECTION: Name */}
                     <div>
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                        <label className={labelCls}>
                             Nom du cours
                         </label>
                         <input
@@ -178,13 +204,13 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                             onChange={handleChange}
                             placeholder="Algorithmique"
                             required
-                            className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
+                            className={inputCls}
                         />
                     </div>
 
                     {/* MID SECTION: Credits */}
                     <div>
-                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                        <label className={labelCls}>
                             Crédits
                         </label>
                         <input
@@ -194,29 +220,29 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                             max={10}
                             value={form.credits}
                             onChange={handleChange}
-                            className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] outline-none focus:border-[#A3A3A3] transition-colors"
+                            className={inputCls}
                         />
                     </div>
 
                     {!isEditMode && (
                         <>
-                            <div className="w-full h-px bg-[#E5E5E5] my-2" />
+                            <div className={divider + ' my-2'} />
 
                             {/* SCHEDULE TOGGLE */}
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <div className="text-[15px] font-bold text-[#1A1A1A] mb-0.5">Ajouter à l'emploi du temps</div>
-                                    <div className="text-[13px] text-[#737373]">Ajoute les créneaux dans l'agenda de la semaine en cours</div>
+                                    <div className="text-[15px] font-bold text-on-surface mb-0.5">Ajouter à l'emploi du temps</div>
+                                    <div className="text-[13px] text-on-surface-variant">Ajoute les créneaux dans l'agenda de la semaine en cours</div>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        value="" 
-                                        className="sr-only peer" 
+                                    <input
+                                        type="checkbox"
+                                        value=""
+                                        className="sr-only peer"
                                         checked={addToSchedule}
                                         onChange={(e) => setAddToSchedule(e.target.checked)}
                                     />
-                                    <div className="w-[42px] h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0d0d0d]"></div>
+                                    <div className="w-[42px] h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-primary-content after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                 </label>
                             </div>
 
@@ -226,18 +252,18 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
 
                                     {/* Session */}
                                     <div>
-                                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                                        <label className={labelCls}>
                                             Session
                                         </label>
                                         <div className="relative">
                                             <select
                                                 value={sessionType}
                                                 onChange={(e) => setSessionType(e.target.value as 'CM' | 'TD' | 'TP')}
-                                                className="w-full h-[46px] px-4 rounded-xl border border-[#E5E5E5] bg-white text-[15px] font-medium text-[#1A1A1A] outline-none appearance-none cursor-pointer focus:border-[#A3A3A3] transition-colors"
+                                                className={inputCls + ' appearance-none cursor-pointer'}
                                             >
                                                 {SLOT_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
                                             </select>
-                                            <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#737373] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                             </svg>
                                         </div>
@@ -245,7 +271,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
 
                                     {/* Days */}
                                     <div>
-                                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                                        <label className={labelCls}>
                                             Jours
                                         </label>
                                         <div className="flex flex-wrap gap-2">
@@ -259,8 +285,8 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                                         aria-pressed={isActive}
                                                         className={`h-[38px] px-5 rounded-full text-[14px] font-medium border transition-colors ${
                                                             isActive
-                                                                ? 'bg-[#0d0d0d] text-white border-[#0d0d0d] shadow-sm'
-                                                                : 'bg-[#FAF9F6] text-[#1A1A1A] border-[#E5E5E5] hover:border-[#A3A3A3]'
+                                                                ? 'bg-primary text-on-primary border-primary shadow-sm'
+                                                                : 'bg-surface-container-low text-on-surface border-outline-variant hover:border-on-surface-variant'
                                                         }`}
                                                     >
                                                         {day.label}
@@ -272,14 +298,14 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
 
                                     {/* Time slots */}
                                     <div>
-                                        <label className="text-[11px] font-bold text-[#737373] uppercase tracking-widest mb-2 block">
+                                        <label className={labelCls}>
                                             Horaires
                                         </label>
                                         <div className="flex flex-col gap-3">
                                             {timeSlots.map((slot, index) => (
-                                                <div key={slot.id} className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-lg p-4">
+                                                <div key={slot.id} className="bg-surface-container-low border border-outline-variant rounded-lg p-4">
                                                     <div className="flex items-center justify-between mb-3">
-                                                        <span className="text-[11px] font-bold text-[#737373] uppercase tracking-widest">
+                                                        <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
                                                             Créneau {index + 1}
                                                         </span>
                                                         {timeSlots.length > 1 && (
@@ -287,47 +313,15 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                                                 type="button"
                                                                 onClick={() => handleDeleteSlot(slot.id)}
                                                                 aria-label="Supprimer ce créneau"
-                                                                className="text-[#A3A3A3] hover:text-[#E74C3C] text-base w-6 h-6 flex items-center justify-center transition-colors -mr-1"
+                                                                className="text-on-surface-variant hover:text-error text-base w-6 h-6 flex items-center justify-center transition-colors -mr-1"
                                                             >
                                                                 ✕
                                                             </button>
                                                         )}
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-3">
-                                                        <div>
-                                                            <label className="text-[11px] font-medium text-[#A3A3A3] mb-1.5 block">
-                                                                Début
-                                                            </label>
-                                                            <div className="relative flex items-center bg-white border border-[#E5E5E5] rounded-lg h-10 pl-3 pr-2 focus-within:border-[#A3A3A3] transition-colors">
-                                                                <svg className="w-4 h-4 text-[#737373] shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 7v5l3 2" />
-                                                                </svg>
-                                                                <input
-                                                                    type="time"
-                                                                    value={slot.startTime}
-                                                                    onChange={(e) => handleUpdateSlot(slot.id, 'startTime', e.target.value)}
-                                                                    className="w-full min-w-0 bg-transparent outline-none text-[14px] font-medium text-[#1A1A1A] px-2"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[11px] font-medium text-[#A3A3A3] mb-1.5 block">
-                                                                Fin
-                                                            </label>
-                                                            <div className="relative flex items-center bg-white border border-[#E5E5E5] rounded-lg h-10 pl-3 pr-2 focus-within:border-[#A3A3A3] transition-colors">
-                                                                <svg className="w-4 h-4 text-[#737373] shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 7v5l3 2" />
-                                                                </svg>
-                                                                <input
-                                                                    type="time"
-                                                                    value={slot.endTime}
-                                                                    onChange={(e) => handleUpdateSlot(slot.id, 'endTime', e.target.value)}
-                                                                    className="w-full min-w-0 bg-transparent outline-none text-[14px] font-medium text-[#1A1A1A] px-2"
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                        <TimeField label="Début" value={slot.startTime} onChange={(v) => handleUpdateSlot(slot.id, 'startTime', v)} />
+                                                        <TimeField label="Fin" value={slot.endTime} onChange={(v) => handleUpdateSlot(slot.id, 'endTime', v)} />
                                                     </div>
                                                 </div>
                                             ))}
@@ -338,23 +332,23 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                                     <button
                                         type="button"
                                         onClick={handleAddSlot}
-                                        className="self-start flex items-center gap-1 text-[14px] font-semibold text-[#0d0d0d] hover:opacity-70 transition-opacity"
+                                        className="self-start flex items-center gap-1 text-[14px] font-semibold text-on-surface hover:opacity-70 transition-opacity"
                                     >
                                         <span className="text-xl leading-none">+</span> Ajouter un créneau
                                     </button>
 
                                     {/* Aperçu */}
                                     {previewItems.length > 0 && (
-                                        <div className="bg-[#FAF9F6] border border-[#E5E5E5] rounded-lg p-4 mt-2">
-                                            <div className="text-[12px] text-[#737373] font-medium mb-3">Aperçu — événements générés</div>
+                                        <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 mt-2">
+                                            <div className="text-[12px] text-on-surface-variant font-medium mb-3">Aperçu — événements générés</div>
                                             <div className="flex flex-wrap gap-2.5 mb-2">
                                                 {previewItems.map((item, idx) => (
-                                                    <div key={idx} className="bg-[#0d0d0d] text-white px-2.5 py-1 rounded-[6px] text-[13px] font-bold border border-[#0d0d0d]">
+                                                    <div key={idx} className="bg-primary text-on-primary px-2.5 py-1 rounded-[6px] text-[13px] font-bold border border-primary">
                                                         {item.str}
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div className="text-[12px] text-[#737373]">· une seule fois (semaine en cours)</div>
+                                            <div className="text-[12px] text-on-surface-variant">· une seule fois (semaine en cours)</div>
                                         </div>
                                     )}
                                 </div>
@@ -362,44 +356,44 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
                         </>
                     )}
 
-                    <div className="w-full h-px bg-[#E5E5E5] mt-4" />
+                    <div className={divider + ' mt-4'} />
 
                     {/* ACTIONS */}
                     <div className="flex justify-between items-center mt-2">
                         {isEditMode ? (
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 onClick={() => {
                                     if (confirm(`Supprimer le cours "${course?.name}" ? Toutes les données associées seront perdues.`)) {
                                         deleteCourse(course!.id);
                                         onClose();
                                     }
                                 }}
-                                className="text-[13px] font-bold text-[#EF4444] hover:opacity-70 px-2"
+                                className="text-[13px] font-bold text-error hover:opacity-70 px-2"
                             >
                                 Supprimer
                             </button>
                         ) : (
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 onClick={onClose}
-                                className="w-[42px] h-[42px] flex items-center justify-center rounded-full border border-[#E5E5E5] text-[#737373] hover:bg-gray-50 transition-colors font-bold text-lg"
+                                className="w-[42px] h-[42px] flex items-center justify-center rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors font-bold text-lg"
                             >
                                 ↓
                             </button>
                         )}
                         <div className="flex gap-3">
-                            <button 
-                                type="button" 
-                                onClick={onClose} 
-                                className="px-5 py-2.5 rounded-xl border border-[#E5E5E5] text-[15px] font-medium text-[#1A1A1A] hover:bg-gray-50 bg-white shadow-sm transition-colors"
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-5 py-2.5 rounded-xl border border-outline-variant text-[15px] font-medium text-on-surface hover:bg-surface-container-low bg-surface shadow-sm transition-colors"
                             >
                                 Annuler
                             </button>
-                            <button 
-                                type="submit" 
-                                disabled={isSubmitting || isCreatingCourse || isUpdatingCourse} 
-                                className="px-5 py-2.5 rounded-xl bg-[#0d0d0d] text-white text-[15px] font-medium hover:bg-[#2f2f2f] disabled:opacity-50 shadow-sm transition-colors flex items-center justify-center min-w-[140px]"
+                            <button
+                                type="submit"
+                                disabled={isSubmitting || isCreatingCourse || isUpdatingCourse}
+                                className="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-[15px] font-medium hover:opacity-90 disabled:opacity-50 shadow-sm transition-colors flex items-center justify-center min-w-[140px]"
                             >
                                 {isSubmitting || isCreatingCourse || isUpdatingCourse
                                     ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -411,7 +405,7 @@ export default function CourseFormModal({ course, onClose }: CourseFormModalProp
 
                 </form>
             </div>
-            
+
             {/* Global style to hide native time picker icons */}
             <style>{`
                 input[type="time"]::-webkit-calendar-picker-indicator {

@@ -1,3 +1,5 @@
+import { Trash2, Clock, Send, Star, Save } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useCourseWorkTypes } from '../../../hooks/useCourses';
 import type { Course, Work, WorkStatus } from '../../../types';
@@ -43,10 +45,10 @@ const Chip = ({
   </button>
 );
 
-const statusOptions: { value: WorkStatus; label: string; icon: string }[] = [
-  { value: 'PLANNED', label: 'Planifié', icon: 'schedule' },
-  { value: 'SUBMITTED', label: 'Soumis', icon: 'outgoing_mail' },
-  { value: 'GRADED', label: 'Noté', icon: 'grade' },
+const statusOptions: { value: WorkStatus; label: string; icon: LucideIcon }[] = [
+  { value: 'PLANNED', label: 'Planifié', icon: Clock },
+  { value: 'SUBMITTED', label: 'Soumis', icon: Send },
+  { value: 'GRADED', label: 'Noté', icon: Star },
 ];
 
 export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModalProps) => {
@@ -108,7 +110,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
               onClick={() => { if (confirm('Supprimer ce travail ?')) onDelete(work.id); }}
               className="btn btn-text text-error"
             >
-              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <Trash2 className="text-[18px]" />
             </button>
           )}
         </div>
@@ -194,7 +196,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
                   active={form.status === option.value}
                   onClick={() => setForm({ ...form, status: option.value })}
                 >
-                  <span className="material-symbols-outlined text-[16px]">{option.icon}</span>
+                  <option.icon className="text-[16px]" />
                   {option.label}
                 </Chip>
               ))}
@@ -218,7 +220,7 @@ export const WorkModal = ({ work, courses, onClose, onSave, onDelete }: WorkModa
           <div className="flex justify-end gap-3 pt-4 border-t border-outline-variant">
             <button type="button" onClick={onClose} className="btn btn-outlined">Annuler</button>
             <button type="submit" className="btn btn-primary">
-              <span className="material-symbols-outlined text-[18px]">save</span> Enregistrer
+              <Save className="text-[18px]" /> Enregistrer
             </button>
           </div>
         </form>

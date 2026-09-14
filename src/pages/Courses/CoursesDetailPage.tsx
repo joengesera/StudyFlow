@@ -1,18 +1,28 @@
+import { Star, CheckSquare, ClipboardList, Calendar, BarChart3, CalendarDays, FileEdit, GraduationCap, ArrowLeft, Check, X, Plus, Shield } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useCourse, useCourseWorkTypes } from '../../hooks/useCourses';
-import { useGrades, useCreateGrade } from '../../hooks/useGrades';
+import { useCourse, useCourseWorkTypes, useCourses } from '../../hooks/useCourses';
+import { useGrades, useCreateGrade, useUpdateGrade } from '../../hooks/useGrades';
 import { useEvents } from '../../hooks/useEvents';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
+import { useWorks } from '../../hooks/useWorks';
 import { useRisk } from '../../hooks/useRisks';
 import { pointsAverage, type PointItem } from '../../utils/pointsEngine';
 import { riskScoreStyles, riskLevelLabel } from '../../utils/risk';
 import CourseFormModal from '../../components/Courses/CourseFormModal';
-import type { Grade } from '../../types';
+import { formatDueDate, getStatusBadge } from '../Works/worksShared';
+import type { Grade, Task } from '../../types';
 
 type Tab = 'notes' | 'travaux' | 'taches' | 'evenements' | 'risque';
+
+// Une tâche appartient à un cours si elle y est directement liée (courseId) ou
+// si elle est liée à un événement de ce cours (eventId -> event.courseId).
+const taskBelongsToCourse = (task: Task, courseEventIds: Set<string>, courseId: string): boolean =>
+  !task.isDeleted &&
+  (task.courseId === courseId || (task.eventId != null && courseEventIds.has(task.eventId)));
 
 const typeToLabel = (grade: Grade): string => {
   if (grade.workTypeLabel) return grade.workTypeLabel;
@@ -68,7 +78,9 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
   const { data: grades = [], isLoading } = useGrades(courseId);
   const { data: courseWorkTypes = [] } = useCourseWorkTypes(courseId);
   const { mutate: createGrade, isPending: isCreating } = useCreateGrade();
+  const { mutate: updateGrade, isPending: isUpdating } = useUpdateGrade();
   const [showForm, setShowForm] = useState(false);
+  const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
   const [simulatorTarget, setSimulatorTarget] = useState<number | ''>(10);
   const [form, setForm] = useState({ name: '', score: '', maxScore: '20', workTypeLabel: 'EXAMEN' });
 
@@ -102,9 +114,52 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
     percentage: workTypeOptions.find((option) => option.value === currentTypeValue)?.weightPercent ?? null,
   });
 
-  const handleCreate = (e: React.FormEvent) => {
+  const resetForm = () =>
+    setForm({
+      name: '',
+      score: '',
+      maxScore: '20',
+      workTypeLabel: workTypeOptions[0]?.value ?? 'EXAMEN'
+    });
+
+  const handleEdit = (grade: Grade) => {
+    setEditingGrade(grade);
+    setForm({
+      name: grade.name,
+      score: String(grade.score),
+      maxScore: String(grade.maxScore),
+      workTypeLabel: grade.workTypeLabel ?? currentTypeValue
+    });
+    setShowForm(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const selectedType = workTypeOptions.find((option) => option.value === currentTypeValue);
+
+    if (editingGrade) {
+      updateGrade(
+        {
+          id: editingGrade.id,
+          payload: {
+            name: form.name,
+            score: Number(form.score),
+            maxScore: Number(form.maxScore),
+            workTypeLabel: currentTypeValue,
+            percentage: selectedType?.weightPercent ?? null
+          }
+        },
+        {
+          onSuccess: () => {
+            setShowForm(false);
+            setEditingGrade(null);
+            resetForm();
+          }
+        }
+      );
+      return;
+    }
+
     createGrade(
       {
         ...form,
@@ -117,12 +172,8 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
       {
         onSuccess: () => {
           setShowForm(false);
-          setForm({
-            name: '',
-            score: '',
-            maxScore: '20',
-            workTypeLabel: workTypeOptions[0]?.value ?? 'EXAMEN'
-          });
+          setEditingGrade(null);
+          resetForm();
         }
       }
     );
@@ -141,17 +192,31 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
           </div>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            setEditingGrade(null);
+            resetForm();
+            setShowForm(!showForm);
+          }}
           className="btn btn-outlined w-full sm:w-auto"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          Ajouter une note
+          {showForm ? <X className="text-[18px]" /> : <Plus className="text-[18px]" />}
+          {showForm ? 'Fermer' : 'Ajouter une note'}
         </button>
       </div>
 
-      {/* Add Form */}
+      {/* Add / Edit Form */}
       {showForm && (
-        <form onSubmit={handleCreate} className="card card-padded space-y-6">
+        <form onSubmit={handleSubmit} className="card card-padded space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="text-label-caps font-label-caps text-on-surface-variant">
+              {editingGrade ? `Modifier : ${editingGrade.name}` : 'Nouvelle note'}
+            </div>
+            {editingGrade && (
+              <span className="px-2.5 py-0.5 rounded text-label-caps font-label-caps bg-surface-container-highest text-on-surface-variant">
+                Édition
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="col-span-2">
               <label className="text-label-sm font-label-sm text-on-surface-variant mb-1.5 block">Nom</label>
@@ -209,9 +274,19 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2 border-t border-outline-variant">
-            <button type="button" onClick={() => setShowForm(false)} className="btn btn-outlined">Annuler</button>
-            <button type="submit" disabled={isCreating} className="btn btn-primary">
-              {isCreating ? 'Enregistrement...' : 'Enregistrer'}
+            <button
+              type="button"
+              onClick={() => {
+                setShowForm(false);
+                setEditingGrade(null);
+                resetForm();
+              }}
+              className="btn btn-outlined"
+            >
+              Annuler
+            </button>
+            <button type="submit" disabled={isCreating || isUpdating} className="btn btn-primary">
+              {isCreating || isUpdating ? 'Enregistrement...' : editingGrade ? 'Enregistrer les modifications' : 'Enregistrer'}
             </button>
           </div>
         </form>
@@ -220,7 +295,7 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
       {/* Notes List */}
       {grades.length === 0 ? (
         <div className="card card-padded text-center text-on-surface-variant py-10">
-          <span className="material-symbols-outlined text-4xl mb-2 block text-outline">grade</span>
+          <Star className="text-4xl mb-2 block text-outline" />
           <p className="text-body-md font-body-md">Aucune note enregistrée.</p>
         </div>
       ) : (
@@ -256,8 +331,12 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
                     <div className={`text-headline-sm font-headline-sm w-20 text-right ${scoreColor}`}>
                       {grade.score} / {grade.maxScore}
                     </div>
-                    <button className="p-2 rounded-full hover:bg-surface-container transition-colors" aria-label="Modifier la note">
-                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant">edit</span>
+                    <button
+                      onClick={() => handleEdit(grade)}
+                      className="p-2 rounded-full hover:bg-surface-container transition-colors"
+                      aria-label="Modifier la note"
+                    >
+                      <FileEdit className="text-[20px] text-on-surface-variant" />
                     </button>
                   </div>
                 </div>
@@ -300,16 +379,18 @@ const NotesTab = ({ courseId }: { courseId: string }) => {
 
 const TasksTab = ({ courseId }: { courseId: string }) => {
   const { data: tasks = [], isLoading } = useTasks();
+  const { data: events = [] } = useEvents();
   const { mutate: updateTask } = useUpdateTask();
 
-  const courseTasks = tasks.filter((t) => t.courseId === courseId && !t.isDeleted);
+  const courseEventIds = new Set(events.filter((e) => e.courseId === courseId).map((e) => e.id));
+  const courseTasks = tasks.filter((t) => taskBelongsToCourse(t, courseEventIds, courseId));
 
   if (isLoading) return <div className="h-40 bg-surface-container-highest/50 rounded-xl animate-pulse" />;
 
   if (courseTasks.length === 0) {
     return (
       <div className="card card-padded text-center text-on-surface-variant py-10">
-        <span className="material-symbols-outlined text-4xl mb-2 block text-outline">task_alt</span>
+        <CheckSquare className="text-4xl mb-2 block text-outline" />
         <p className="text-body-md font-body-md">Aucune tâche pour ce cours.</p>
       </div>
     );
@@ -328,7 +409,7 @@ const TasksTab = ({ courseId }: { courseId: string }) => {
               onClick={() => updateTask({ id: task.id, payload: { status: task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED' } })}
               aria-label={task.status === 'COMPLETED' ? 'Marquer comme à faire' : 'Marquer comme terminée'}
             >
-              {task.status === 'COMPLETED' && <span className="material-symbols-outlined text-on-primary text-[18px]">check</span>}
+              {task.status === 'COMPLETED' && <Check className="text-on-primary text-[18px]" />}
             </button>
             <div className="flex-1 min-w-0">
               <div className={`text-body-md font-body-md font-medium text-on-surface ${task.status === 'COMPLETED' ? 'line-through' : ''}`}>
@@ -355,6 +436,68 @@ const TasksTab = ({ courseId }: { courseId: string }) => {
   );
 };
 
+const TravauxTab = ({ courseId }: { courseId: string }) => {
+  const { data: works = [], isLoading } = useWorks();
+  const { data: courses = [] } = useCourses();
+  const course = courses.find((item) => item.id === courseId);
+
+  const courseWorks = works
+    .filter((w) => w.courseId === courseId)
+    .sort((a, b) => {
+      if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      if (a.dueDate && !b.dueDate) return -1;
+      if (!a.dueDate && b.dueDate) return 1;
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+
+  if (isLoading) return <div className="h-40 bg-surface-container-highest/50 rounded-xl animate-pulse" />;
+
+  if (courseWorks.length === 0) {
+    return (
+      <div className="card card-padded text-center text-on-surface-variant py-10">
+        <ClipboardList className="text-4xl mb-2 block text-outline" />
+        <p className="text-body-md font-body-md">Aucun travail pour ce cours.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="p-card-padding border-b border-outline-variant bg-surface-bright">
+        <h3 className="text-label-caps font-label-caps text-on-surface-variant">Travaux du cours</h3>
+      </div>
+      <div className="divide-y divide-outline-variant">
+        {courseWorks.map((work) => {
+          const badge = getStatusBadge(work.status);
+          const scoreDisplay = work.status === 'GRADED' && work.pointsEarned != null && work.pointsPossible != null
+            ? `${work.pointsEarned.toFixed(1)} / ${work.pointsPossible}`
+            : '—';
+          return (
+            <div key={work.id} className="p-card-padding flex items-center gap-4">
+              <div
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: course?.color || 'var(--color-on-surface)' }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-body-md font-body-md font-medium text-on-surface">{work.title}</div>
+                <div className="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-2 mt-0.5">
+                  <span>{work.workTypeLabel || 'PROJET'}</span>
+                  <span className="w-1 h-1 bg-outline-variant rounded-full" />
+                  <span>{formatDueDate(work.dueDate)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`px-2.5 py-1 rounded text-label-caps font-label-caps ${badge.bg}`}>{badge.label}</span>
+                <div className="text-headline-sm font-headline-sm w-[72px] text-right text-on-surface-variant">{scoreDisplay}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const EventsTab = ({ courseId }: { courseId: string }) => {
   const { data: events = [], isLoading } = useEvents();
 
@@ -367,7 +510,7 @@ const EventsTab = ({ courseId }: { courseId: string }) => {
   if (courseEvents.length === 0) {
     return (
       <div className="card card-padded text-center text-on-surface-variant py-10">
-        <span className="material-symbols-outlined text-4xl mb-2 block text-outline">event</span>
+        <Calendar className="text-4xl mb-2 block text-outline" />
         <p className="text-body-md font-body-md">Aucun événement pour ce cours.</p>
       </div>
     );
@@ -385,7 +528,7 @@ const EventsTab = ({ courseId }: { courseId: string }) => {
             <div className="flex-1 min-w-0">
               <div className="text-body-md font-body-md font-medium text-on-surface">{event.title}</div>
               <div className="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1.5 mt-0.5">
-                <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                <CalendarDays className="text-[16px]" />
                 {new Date(event.startDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                 <span className="w-1 h-1 bg-outline-variant rounded-full" />
                 {new Date(event.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} –{' '}
@@ -410,7 +553,7 @@ const RiskTab = ({ courseId }: { courseId: string }) => {
   if (!risk) {
     return (
       <div className="card card-padded text-center text-on-surface-variant py-10">
-        <span className="material-symbols-outlined text-4xl mb-2 block text-outline">analytics</span>
+        <BarChart3 className="text-4xl mb-2 block text-outline" />
         <p className="text-body-md font-body-md">Données insuffisantes pour calculer le risque.</p>
       </div>
     );
@@ -462,13 +605,6 @@ const RiskTab = ({ courseId }: { courseId: string }) => {
   );
 };
 
-const placeholderSection = (text: string) => (
-  <div className="card card-padded text-center text-on-surface-variant py-10">
-    <span className="material-symbols-outlined text-4xl mb-2 block text-outline">construction</span>
-    <p className="text-body-md font-body-md">{text}</p>
-  </div>
-);
-
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -478,9 +614,14 @@ export default function CourseDetailPage() {
   const { data: course, isLoading } = useCourse(id ?? '');
   const { data: grades = [] } = useGrades(id ?? '');
   const { data: tasks = [] } = useTasks();
+  const { data: events = [] } = useEvents();
   const { data: risk } = useRisk(id ?? '');
 
-  const courseTasks = tasks.filter(t => t.courseId === id && !t.isDeleted);
+  const courseEventIds = useMemo(
+    () => new Set(events.filter((e) => e.courseId === id).map((e) => e.id)),
+    [events, id]
+  );
+  const courseTasks = tasks.filter((t) => taskBelongsToCourse(t, courseEventIds, id ?? ''));
 
   const average = grades.length === 0 ? null : pointsAverage(grades);
 
@@ -492,22 +633,22 @@ export default function CourseDetailPage() {
   if (!course) {
     return (
       <div className="text-center py-16 text-on-surface-variant max-w-4xl mx-auto">
-        <span className="material-symbols-outlined text-6xl mb-3 block text-outline">school</span>
+        <GraduationCap className="text-6xl mb-3 block text-outline" />
         <h2 className="text-headline-md font-headline-md text-on-surface mb-2">Cours introuvable</h2>
         <button onClick={() => navigate('/courses')} className="mt-4 btn btn-outlined">
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <ArrowLeft className="text-[18px]" />
           Retour aux cours
         </button>
       </div>
     );
   }
 
-  const tabs: { key: Tab; label: string; icon: string }[] = [
-    { key: 'notes', label: 'Notes', icon: 'grade' },
-    { key: 'travaux', label: 'Travaux', icon: 'assignment' },
-    { key: 'taches', label: 'Tâches', icon: 'task_alt' },
-    { key: 'evenements', label: 'Événements', icon: 'event' },
-    { key: 'risque', label: 'Risque', icon: 'analytics' },
+  const tabs: { key: Tab; label: string; icon: LucideIcon }[] = [
+    { key: 'notes', label: 'Notes', icon: Star },
+    { key: 'travaux', label: 'Travaux', icon: ClipboardList },
+    { key: 'taches', label: 'Tâches', icon: CheckSquare },
+    { key: 'evenements', label: 'Événements', icon: Calendar },
+    { key: 'risque', label: 'Risque', icon: BarChart3 },
   ];
 
   return (
@@ -517,7 +658,7 @@ export default function CourseDetailPage() {
         onClick={() => navigate('/courses')}
         className="btn btn-text"
       >
-        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+        <ArrowLeft className="text-[18px]" />
         Mes cours
       </button>
 
@@ -540,7 +681,7 @@ export default function CourseDetailPage() {
             onClick={() => setShowEditModal(true)}
             className="btn btn-outlined"
           >
-            <span className="material-symbols-outlined text-[18px]">edit</span>
+            <FileEdit className="text-[18px]" />
             Modifier
           </button>
         </div>
@@ -550,7 +691,7 @@ export default function CourseDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-gutter mb-8">
         <div className="card card-padded flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-primary">analytics</span>
+            <BarChart3 className="text-primary" />
             <span className="text-label-caps font-label-caps text-on-surface-variant">Moyenne</span>
           </div>
           <div className="text-display-lg font-display-lg text-on-surface">
@@ -560,21 +701,21 @@ export default function CourseDetailPage() {
         </div>
         <div className="card card-padded flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-primary">grade</span>
+            <Star className="text-primary" />
             <span className="text-label-caps font-label-caps text-on-surface-variant">Notes</span>
           </div>
           <div className="text-display-lg font-display-lg text-on-surface">{grades.length}</div>
         </div>
         <div className="card card-padded flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-primary">task_alt</span>
+            <CheckSquare className="text-primary" />
             <span className="text-label-caps font-label-caps text-on-surface-variant">Tâches</span>
           </div>
           <div className="text-display-lg font-display-lg text-on-surface">{courseTasks.length}</div>
         </div>
         <div className="card card-padded flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2 mb-2">
-            <span className="material-symbols-outlined text-error">shield</span>
+            <Shield className="text-error" />
             <span className="text-label-caps font-label-caps text-on-surface-variant">Risque</span>
           </div>
           <div className={`text-display-lg font-display-lg ${riskScoreStyles(risk?.overallScore ?? 0).text}`}>{Math.round(risk?.overallScore || 0)}</div>
@@ -595,7 +736,7 @@ export default function CourseDetailPage() {
                 : 'text-on-surface-variant border-transparent hover:text-on-surface'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
+            <tab.icon className="text-[20px]" />
             {tab.label}
           </button>
         ))}
@@ -604,7 +745,7 @@ export default function CourseDetailPage() {
       {/* Tab Content */}
       <div role="tabpanel">
         {activeTab === 'notes' && <NotesTab courseId={id ?? ''} />}
-        {activeTab === 'travaux' && placeholderSection("L'onglet Travaux sera bientôt implémenté.")}
+        {activeTab === 'travaux' && <TravauxTab courseId={id ?? ''} />}
         {activeTab === 'taches' && <TasksTab courseId={id ?? ''} />}
         {activeTab === 'evenements' && <EventsTab courseId={id ?? ''} />}
         {activeTab === 'risque' && <RiskTab courseId={id ?? ''} />}

@@ -1,3 +1,4 @@
+import { MapPin, CalendarX } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { Event } from '../../../types';
@@ -34,7 +35,7 @@ export function SelectedDayEventsList({
 
       {events.length === 0 ? (
         <div className="border border-outline-variant bg-surface-container-lowest rounded-xl text-center py-10">
-          <span className="material-symbols-outlined text-4xl mb-2 block text-outline">event_busy</span>
+          <CalendarX className="text-4xl mb-2 block text-outline" />
           <p className="text-body-md font-body-md text-on-surface-variant">Aucun événement pour cette journée.</p>
         </div>
       ) : (
@@ -65,7 +66,7 @@ export function SelectedDayEventsList({
                   </div>
                   {event.location && (
                     <div className="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1 mt-1 truncate">
-                      <span className="material-symbols-outlined text-[14px]">location_on</span>
+                      <MapPin className="text-[14px]" />
                       {event.location}
                     </div>
                   )}

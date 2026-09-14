@@ -1,3 +1,4 @@
+import { CheckCircle, X } from 'lucide-react';
 import { useEffect } from 'react';
 import { useToastStore } from '../stores/toastStore';
 import type { ToastItem } from '../stores/toastStore';
@@ -15,7 +16,7 @@ const Toast = ({ toast }: { toast: ToastItem }) => {
       role="status"
       className="w-full max-w-sm px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant shadow-lg flex items-center gap-3"
     >
-      <span className="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0">check_circle</span>
+      <CheckCircle className="text-[18px] text-on-surface-variant shrink-0" />
       <span className="flex-1 text-body-md font-body-md text-on-surface">{toast.message}</span>
       {toast.actionLabel && (
         <button
@@ -33,7 +34,7 @@ const Toast = ({ toast }: { toast: ToastItem }) => {
         aria-label="Fermer la notification"
         className="text-on-surface-variant hover:text-on-surface p-0.5 rounded-full hover:bg-surface-container-highest shrink-0"
       >
-        <span className="material-symbols-outlined text-[16px]">close</span>
+        <X className="text-[16px]" />
       </button>
     </div>
   );

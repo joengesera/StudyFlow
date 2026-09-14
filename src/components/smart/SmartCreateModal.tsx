@@ -1,3 +1,4 @@
+import { Sparkles, X } from 'lucide-react';
 import { useEffect } from 'react';
 import { SmartDraftForm } from './SmartDraftForm';
 
@@ -35,7 +36,7 @@ export function SmartCreateModal({ open, onClose }: SmartCreateModalProps) {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">auto_awesome</span>
+            <Sparkles className="text-primary" />
             <h3 className="text-headline-sm font-headline-sm text-on-surface">Création intelligente</h3>
           </div>
           <button
@@ -43,7 +44,7 @@ export function SmartCreateModal({ open, onClose }: SmartCreateModalProps) {
             aria-label="Fermer"
             className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface -mr-2"
           >
-            <span className="material-symbols-outlined">close</span>
+            <X />
           </button>
         </div>
 

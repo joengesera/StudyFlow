@@ -1,3 +1,4 @@
+import { Sparkles, Plus, Calendar, CheckSquare, Clock } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -109,7 +110,7 @@ export function SmartDraftForm({ autoFocus = false, onCreated }: SmartDraftFormP
   return (
     <div>
       <div className="flex items-center gap-3">
-        <span className="material-symbols-outlined text-on-surface-variant">auto_awesome</span>
+        <Sparkles className="text-on-surface-variant" />
         <input
           value={text}
           onChange={(e) => { setText(e.target.value); setSelectedCourseId(null); }}
@@ -121,7 +122,7 @@ export function SmartDraftForm({ autoFocus = false, onCreated }: SmartDraftFormP
         />
         {canSubmit && (
           <button onClick={() => void handleSubmit()} className="btn btn-primary px-4 py-2 text-label-sm shrink-0">
-            <span className="material-symbols-outlined text-[16px]">add</span>
+            <Plus className="text-[16px]" />
             {isEvent ? 'Événement' : 'Tâche'}
           </button>
         )}
@@ -130,7 +131,7 @@ export function SmartDraftForm({ autoFocus = false, onCreated }: SmartDraftFormP
       {parsed && (
         <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-outline-variant">
           <span className="px-2 py-1 rounded-full bg-surface-container text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">{isEvent ? 'event' : 'task_alt'}</span>
+            {isEvent ? <Calendar className="text-[14px]" /> : <CheckSquare className="text-[14px]" />}
             {isEvent ? 'Événement' : 'Tâche'}
           </span>
           {!isEvent && (
@@ -140,7 +141,7 @@ export function SmartDraftForm({ autoFocus = false, onCreated }: SmartDraftFormP
           )}
           {parsed.dueDate && (
             <span className="px-2 py-1 rounded-full bg-surface-container text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">schedule</span>
+              <Clock className="text-[14px]" />
               {format(new Date(parsed.dueDate), 'EEE d MMM HH:mm', { locale: fr })}
             </span>
           )}

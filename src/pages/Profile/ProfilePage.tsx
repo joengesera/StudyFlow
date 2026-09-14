@@ -1,9 +1,11 @@
+import { User as UserIcon, Contrast, Settings, Lock, EyeOff, Eye, Bell, BarChart3, Smartphone, Trash2, MoreVertical, Sun, Moon, Monitor } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { isAxiosError } from 'axios';
-import { useAuthStore } from '../../stores/authStore';
+import { isApiError, apiClient } from '../../api/client';
+import { useAuthStore, type User } from '../../stores/authStore';
 import { useVisualComfort, MIN_VISUAL_SCALE, MAX_VISUAL_SCALE, DEFAULT_VISUAL_SCALE } from '../../hooks/useVisualComfort';
+import { useTheme, type ThemeMode } from '../../hooks/useTheme';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
-import { apiClient } from '../../api/client';
 import { getInitials } from '../../utils/initials';
 
 const usePwaInstall = () => {
@@ -31,16 +33,16 @@ const PersonalInfoSection = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setSuccess(false); setIsLoading(true);
     try {
-      const { data } = await apiClient.put('/updateprofile', form);
+      const { data } = await apiClient.put<{ data: Partial<User> }>('/updateprofile', form);
       updateUser(data.data); setSuccess(true); setTimeout(() => setSuccess(false), 3000);
-    } catch (err) { if (isAxiosError(err)) setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.'); }
+    } catch (err) { if (isApiError(err)) setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.'); }
     finally { setIsLoading(false); }
   };
 
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-6">
-        <span className="material-symbols-outlined text-primary text-[20px]">person</span>
+        <UserIcon className="text-primary text-[20px]" />
         <div className="text-label-caps font-label-caps text-on-surface-variant">Informations personnelles</div>
       </div>
 
@@ -66,8 +68,6 @@ const PersonalInfoSection = () => {
           </div>
         </div>
 
-      
-
         {error && <div className="text-label-sm font-label-sm text-error">{error}</div>}
         {success && <div className="text-label-sm font-label-sm text-primary">Profil mis à jour avec succès.</div>}
 
@@ -81,13 +81,55 @@ const PersonalInfoSection = () => {
   );
 };
 
+const AppearanceSection = () => {
+  const { mode, resolved, setMode } = useTheme();
+  const options: { value: ThemeMode; icon: LucideIcon; label: string; sub: string }[] = [
+    { value: 'light', icon: Sun, label: 'Clair', sub: 'Toujours clair' },
+    { value: 'dark', icon: Moon, label: 'Sombre', sub: 'Toujours sombre' },
+    { value: 'system', icon: Monitor, label: 'Système', sub: `Suit le navigateur (actuel : ${resolved === 'dark' ? 'sombre' : 'clair'})` },
+  ];
+  return (
+    <section className="card card-padded">
+      <div className="flex items-center gap-3 mb-4">
+        <Contrast className="text-primary text-[20px]" />
+        <div className="text-label-caps font-label-caps text-on-surface-variant">Apparence</div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Thème d'affichage">
+        {options.map((opt) => {
+          const active = mode === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => setMode(opt.value)}
+              className={`flex items-center gap-3 p-4 rounded-lg border text-left transition-colors ${
+                active
+                  ? 'border-primary bg-surface-container'
+                  : 'border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low'
+              }`}
+            >
+              <opt.icon className={`text-[24px] ${active ? 'text-primary' : 'text-on-surface-variant'}`} />
+              <span>
+                <span className="block text-body-md font-body-md font-medium text-on-surface">{opt.label}</span>
+                <span className="block text-label-sm font-label-sm text-on-surface-variant mt-0.5">{opt.sub}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+};
+
 const VisualComfortSection = () => {
   const { scale, setScale } = useVisualComfort();
   const formatPercent = (value: number) => `${value}%`;
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-4">
-        <span className="material-symbols-outlined text-primary text-[20px]">settings</span>
+        <Settings className="text-primary text-[20px]" />
         <div className="text-label-caps font-label-caps text-on-surface-variant">Accessibilité visuelle</div>
       </div>
       <p className="text-body-md font-body-md text-on-surface-variant mb-4">Ajuste la taille globale des textes de 100 à 200 % pour un meilleur confort de lecture.</p>
@@ -112,7 +154,7 @@ const VisualComfortSection = () => {
         <span>{formatPercent(MAX_VISUAL_SCALE)}</span>
       </div>
       <div className="rounded p-4 bg-surface-container-highest text-body-md font-body-md text-on-surface" aria-live="polite">
-        Régler la taille des textes améliore le confort de lecture de toute l'application, y compris les titres et les listes de cours.
+        Régler la taille des textes améliore le confort de lecture de toute l&apos;application, y compris les titres et les listes de cours.
       </div>
       {scale !== DEFAULT_VISUAL_SCALE && (
         <button
@@ -144,14 +186,14 @@ const SecuritySection = () => {
     try {
       await apiClient.put('/updateprofile', { currentPassword: form.currentPassword, newPassword: form.newPassword });
       setSuccess(true); setForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setTimeout(() => setSuccess(false), 3000);
-    } catch (err) { if (isAxiosError(err)) setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.'); }
+    } catch (err) { if (isApiError(err)) setError(err.response?.data?.error?.message ?? 'Une erreur est survenue.'); }
     finally { setIsLoading(false); }
   };
 
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-6">
-        <span className="material-symbols-outlined text-primary text-[20px]">lock</span>
+        <Lock className="text-primary text-[20px]" />
         <div className="text-label-caps font-label-caps text-on-surface-variant">Sécurité</div>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -160,7 +202,7 @@ const SecuritySection = () => {
           <div className="relative">
             <input type={showCurrent ? 'text' : 'password'} value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
             <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
-              {showCurrent ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
+              {showCurrent ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
             </button>
           </div>
         </div>
@@ -170,7 +212,7 @@ const SecuritySection = () => {
             <div className="relative">
               <input type={showNew ? 'text' : 'password'} value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
               <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
-                {showNew ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
+                {showNew ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
               </button>
             </div>
           </div>
@@ -179,7 +221,7 @@ const SecuritySection = () => {
             <div className="relative">
               <input type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="••••••••" required className="input input-bordered w-full h-12 pr-12 text-base font-mono tracking-wider" />
               <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface">
-                {showConfirm ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
+                {showConfirm ? <EyeOff className="text-[20px]" /> : <Eye className="text-[20px]" />}
               </button>
             </div>
           </div>
@@ -203,7 +245,7 @@ const NotificationsSection = () => {
     <section className="card card-padded">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary text-[20px]">notifications</span>
+          <Bell className="text-primary text-[20px]" />
           <div className="text-label-caps font-label-caps text-on-surface-variant">Notifications push</div>
         </div>
         <span className={`px-2.5 py-1 rounded text-label-caps font-label-caps bg-surface-container-highest text-on-surface-variant`}>
@@ -261,7 +303,7 @@ const StatsSection = () => {
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-4">
-        <span className="material-symbols-outlined text-primary text-[20px]">bar_chart</span>
+        <BarChart3 className="text-primary text-[20px]" />
         <div className="text-label-caps font-label-caps text-on-surface-variant">Statistiques du compte</div>
       </div>
       <div className="divide-y divide-outline-variant">
@@ -281,19 +323,19 @@ const PwaSection = () => {
   return (
     <section className="card card-padded">
       <div className="flex items-center gap-3 mb-4">
-        <span className="material-symbols-outlined text-primary text-[20px]">smartphone</span>
+        <Smartphone className="text-primary text-[20px]" />
         <div className="text-label-caps font-label-caps text-on-surface-variant">Application</div>
       </div>
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-on-primary text-xl font-bold shrink-0">SF</div>
         <div className="flex-1">
-          <div className="text-body-md font-body-md font-medium text-on-surface mb-1">Installer l'application</div>
-          <div className="text-label-sm font-label-sm text-on-surface-variant">Accédez à l'app depuis ton bureau ou écran d'accueil</div>
+          <div className="text-body-md font-body-md font-medium text-on-surface mb-1">Installer l&apos;application</div>
+          <div className="text-label-sm font-label-sm text-on-surface-variant">Accédez à l&apos;app depuis ton bureau ou écran d&apos;accueil</div>
         </div>
         {installed ? (
           <span className="btn btn-outlined px-3 py-1 text-label-sm">Installée</span>
         ) : isIos ? (
-          <span className="text-label-sm font-label-sm text-on-surface-variant max-w-xs text-right leading-tight">Appuie sur Partager → "Sur l'écran d'accueil"</span>
+          <span className="text-label-sm font-label-sm text-on-surface-variant max-w-xs text-right leading-tight">Appuie sur Partager → &quot;Sur l&apos;écran d&apos;accueil&quot;</span>
         ) : canInstall ? (
           <button onClick={install} className="btn btn-outlined shrink-0">Installer</button>
         ) : (
@@ -309,7 +351,7 @@ const DangerZone = () => {
   return (
     <section className="card card-padded border-error/20 bg-error/5 relative">
       <div className="flex items-center gap-3 mb-4">
-        <span className="material-symbols-outlined text-error text-[20px]">delete</span>
+        <Trash2 className="text-error text-[20px]" />
         <div className="text-label-caps font-label-caps text-error">Zone dangereuse</div>
       </div>
       <div className="flex justify-between items-center">
@@ -335,9 +377,10 @@ export default function ProfilePage() {
     <div className="max-w-3xl mx-auto space-y-6 p-2 pt-2 pb-16">
       <header className="flex justify-between items-center mb-2">
         <h1 className="text-display-lg font-display-lg text-on-surface">Mon profil</h1>
-        <button className="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface" aria-label="Plus d'options"><span className="material-symbols-outlined text-[24px]">more_vert</span></button>
+        <button className="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface" aria-label="Plus d&apos;options"><MoreVertical className="text-[24px]" /></button>
       </header>
       <PersonalInfoSection />
+      <AppearanceSection />
       <VisualComfortSection />
       <SecuritySection />
       <NotificationsSection />

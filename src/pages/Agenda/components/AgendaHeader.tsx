@@ -1,3 +1,4 @@
+import { ChevronRight, Plus, ChevronLeft } from 'lucide-react';
 import { addDays, format, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { weekPlannerDays, type AgendaViewMode } from '../agendaShared';
@@ -54,7 +55,7 @@ export function AgendaHeader({
             className="px-2 py-1.5 rounded-md text-on-surface-variant hover:text-on-background hover:bg-surface-container-highest transition-colors"
             aria-label="Période précédente"
           >
-            <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+            <ChevronLeft className="text-[18px]" />
           </button>
           <button
             onClick={onToday}
@@ -67,7 +68,7 @@ export function AgendaHeader({
             className="px-2 py-1.5 rounded-md text-on-surface-variant hover:text-on-background hover:bg-surface-container-highest transition-colors"
             aria-label="Période suivante"
           >
-            <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+            <ChevronRight className="text-[18px]" />
           </button>
         </div>
 
@@ -90,7 +91,7 @@ export function AgendaHeader({
         </div>
 
         <button onClick={onCreateEvent} className="btn btn-primary whitespace-nowrap">
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <Plus className="text-[18px]" />
           <span className="hidden md:inline">Nouvel événement</span>
         </button>
       </div>

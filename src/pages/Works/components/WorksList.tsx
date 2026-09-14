@@ -1,3 +1,4 @@
+import { Plus, ClipboardList } from 'lucide-react';
 import type { Course, Work } from '../../../types';
 import { formatDueDate, getScoreColor, getStatusBadge } from '../worksShared';
 
@@ -60,10 +61,10 @@ export const WorksList = ({ works, courses, onSelectWork, onCreate }: WorksListP
   if (works.length === 0) {
     return (
       <div className="card card-padded text-center text-on-surface-variant py-10">
-        <span className="material-symbols-outlined text-4xl mb-2 block text-outline">assignment</span>
+        <ClipboardList className="text-4xl mb-2 block text-outline" />
         <p className="text-body-md font-body-md mb-4">Aucun travail trouvé.</p>
         <button onClick={onCreate} className="btn btn-primary mx-auto">
-          <span className="material-symbols-outlined text-[18px]">add</span>
+          <Plus className="text-[18px]" />
           Nouveau travail
         </button>
       </div>
@@ -93,7 +94,7 @@ export const WorksList = ({ works, courses, onSelectWork, onCreate }: WorksListP
         onClick={onCreate}
         className="w-full py-4 border-t border-dashed border-outline-variant text-label-sm font-label-sm text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors flex items-center justify-center gap-1.5"
       >
-        <span className="material-symbols-outlined text-[18px]">add</span>
+        <Plus className="text-[18px]" />
         Nouveau travail
       </button>
     </div>

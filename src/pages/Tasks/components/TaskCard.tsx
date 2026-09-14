@@ -1,3 +1,4 @@
+import { MoreVertical, Clock, Trash2, FileEdit, Check, Play } from 'lucide-react';
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -65,7 +66,7 @@ export const TaskCard = ({ task, courseName, onSelect, onStartFocus, onDelete, i
         <div className="flex items-center gap-2.5 min-w-0">
           {isCompleted ? (
             <div className="w-5 h-5 rounded-full bg-status-done flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-white text-[18px]">check</span>
+              <Check className="text-white text-[18px]" />
             </div>
           ) : (
             <div className="w-3 h-3 rounded-full shrink-0" style={{ background: statusDot }} />
@@ -77,7 +78,7 @@ export const TaskCard = ({ task, courseName, onSelect, onStartFocus, onDelete, i
         <div className="flex items-center gap-1 shrink-0 ml-2 mt-1">
           {task.timeSpentMinutes > 0 && (
             <div className="text-label-sm font-label-sm text-on-surface-variant whitespace-nowrap flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">schedule</span>
+              <Clock className="text-[16px]" />
               {task.timeSpentMinutes} min
             </div>
           )}
@@ -94,7 +95,7 @@ export const TaskCard = ({ task, courseName, onSelect, onStartFocus, onDelete, i
               aria-expanded={menuOpen}
               className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">more_vert</span>
+              <MoreVertical className="text-[20px]" />
             </button>
             {menuOpen && (
               <>
@@ -106,7 +107,7 @@ export const TaskCard = ({ task, courseName, onSelect, onStartFocus, onDelete, i
                     onClick={() => { setMenuOpen(false); onStartFocus(task); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-label-sm font-label-sm text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                    <Play className="text-[18px]" />
                     Faire maintenant
                   </button>
                   <button
@@ -114,7 +115,7 @@ export const TaskCard = ({ task, courseName, onSelect, onStartFocus, onDelete, i
                     onClick={() => { setMenuOpen(false); onSelect(task); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-label-sm font-label-sm text-on-surface hover:bg-surface-container-low transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                    <FileEdit className="text-[18px]" />
                     Modifier
                   </button>
                   <button
@@ -122,7 +123,7 @@ export const TaskCard = ({ task, courseName, onSelect, onStartFocus, onDelete, i
                     onClick={() => { setMenuOpen(false); onDelete(task.id); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-label-sm font-label-sm text-error hover:bg-error-container/30 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    <Trash2 className="text-[18px]" />
                     Supprimer
                   </button>
                 </div>

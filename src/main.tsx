@@ -5,7 +5,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { router } from './router';
 import { queryClient, queryPersister } from './lib/queryClient';
 import { initializeVisualComfort } from './hooks/useVisualComfort';
-import 'material-symbols/outlined.css';
+import { initializeTheme } from './hooks/useTheme';
 import './index.css';
 
 const ReactQueryDevtools = import.meta.env.DEV
@@ -17,6 +17,7 @@ const ReactQueryDevtools = import.meta.env.DEV
   : null;
 
 initializeVisualComfort();
+initializeTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

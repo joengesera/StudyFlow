@@ -1,3 +1,4 @@
+import { Loader2, ArrowLeft, Minimize, Maximize, Pause, Play, SkipForward, Clock, CheckSquare } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTasks, useUpdateTask } from '../../hooks/useTasks';
@@ -124,7 +125,7 @@ export default function FocusPage() {
   if (!task) {
     return (
       <div className="h-screen w-full bg-background flex items-center justify-center">
-        <span className="material-symbols-outlined text-4xl text-on-surface-variant animate-spin">progress_activity</span>
+        <Loader2 className="text-4xl text-on-surface-variant animate-spin" />
       </div>
     );
   }
@@ -138,7 +139,7 @@ export default function FocusPage() {
           className="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-label-sm font-label-sm text-on-surface-variant hover:bg-surface-container-low transition-colors"
           aria-label="Quitter le mode focus"
         >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <ArrowLeft className="text-[18px]" />
           Quitter
         </button>
         <button
@@ -146,9 +147,7 @@ export default function FocusPage() {
           className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors"
           aria-label={isFullscreen ? 'Quitter le plein écran' : 'Passer en plein écran'}
         >
-          <span className="material-symbols-outlined text-[20px]">
-            {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-          </span>
+          {isFullscreen ? <Minimize className="text-[20px]" /> : <Maximize className="text-[20px]" />}
         </button>
       </header>
 
@@ -167,7 +166,7 @@ export default function FocusPage() {
             onClick={isRunning ? pause : start}
             className="btn btn-primary h-12 px-8 text-body-md font-body-md"
           >
-            <span className="material-symbols-outlined text-[20px]">{isRunning ? 'pause' : 'play_arrow'}</span>
+            {isRunning ? <Pause className="text-[20px]" /> : <Play className="text-[20px]" />}
             {isRunning ? 'Pause' : 'Démarrer'}
           </button>
           <button
@@ -175,7 +174,7 @@ export default function FocusPage() {
             className="w-12 h-12 p-2.5 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
             aria-label="Passer la phase"
           >
-            <span className="material-symbols-outlined text-[22px]">skip_next</span>
+            <SkipForward className="text-[22px]" />
           </button>
         </div>
 
@@ -208,7 +207,7 @@ export default function FocusPage() {
             )}
             {task.timeSpentMinutes > 0 && (
               <span className="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">schedule</span>
+                <Clock className="text-[16px]" />
                 {task.timeSpentMinutes} min travaillées
               </span>
             )}
@@ -236,7 +235,7 @@ export default function FocusPage() {
           onClick={finishCurrent}
           className="btn btn-outlined h-11 px-6 text-label-md font-label-md"
         >
-          <span className="material-symbols-outlined text-[18px]">task_alt</span>
+          <CheckSquare className="text-[18px]" />
           Marquer comme terminée
         </button>
       </main>

@@ -1,3 +1,4 @@
+import { X, Trash2, CalendarDays, Save, Clock } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useMemo, useState } from 'react';
@@ -67,7 +68,7 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
             <h2 className="text-headline-md font-headline-md text-on-surface">Modifier la tâche</h2>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface transition-colors" aria-label="Fermer">
-            <span className="material-symbols-outlined text-[22px]">close</span>
+            <X className="text-[22px]" />
           </button>
         </div>
 
@@ -109,16 +110,16 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
             </div>
             <div className="card card-padded">
               <div className="flex items-center gap-2 text-body-md font-body-md text-on-surface mb-3">
-                <span className="material-symbols-outlined text-on-surface-variant">calendar_today</span>
+                <CalendarDays className="text-on-surface-variant" />
                 <span>{dueDate ? format(new Date(dueDate), 'EEEE d MMMM, HH:mm', { locale: fr }) : 'Aucune date définie'}</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">calendar_today</span>
+                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                   <input type="date" value={dueDatePart} onChange={(e) => handleDateChange(e.target.value)} className="input input-bordered w-full h-12 pl-9 pr-3 text-base" />
                 </div>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">schedule</span>
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                   <input type="time" value={dueTimePart} onChange={(e) => handleTimeChange(e.target.value)} className="input input-bordered w-full h-12 pl-9 pr-3 text-base" />
                 </div>
               </div>
@@ -144,12 +145,12 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
 
         <div className="flex flex-col sm:flex-row gap-3 justify-end pt-2 border-t border-outline-variant">
           <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); }}} className="btn btn-error w-full sm:w-auto">
-            <span className="material-symbols-outlined text-[18px]">delete</span> Supprimer
+            <Trash2 className="text-[18px]" /> Supprimer
           </button>
           <div className="flex gap-2 w-full sm:w-auto">
             <button onClick={onClose} className="btn btn-outlined flex-1">Annuler</button>
             <button onClick={handleSave} className="btn btn-primary flex-1">
-              <span className="material-symbols-outlined text-[18px]">save</span> Enregistrer
+              <Save className="text-[18px]" /> Enregistrer
             </button>
           </div>
         </div>

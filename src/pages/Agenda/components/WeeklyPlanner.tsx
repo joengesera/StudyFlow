@@ -1,3 +1,4 @@
+import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { addDays, format, isToday, parseISO, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -161,7 +162,7 @@ export function WeeklyPlanner({
                         </div>
                         {height >= 90 && event.location && (
                           <div className="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1 mt-1 truncate">
-                            <span className="material-symbols-outlined text-[14px]">location_on</span>
+                            <MapPin className="text-[14px]" />
                             {event.location}
                           </div>
                         )}

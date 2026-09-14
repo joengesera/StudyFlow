@@ -1,3 +1,4 @@
+import { ChevronDown, Plus } from 'lucide-react';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import type { Task } from '../../../types';
@@ -46,20 +47,16 @@ export const KanbanColumn = ({
         aria-expanded={!isCollapsed}
         className="flex w-full items-center gap-2 px-4 py-3 text-left cursor-pointer select-none"
       >
-        <span className="material-symbols-outlined text-[20px]" style={{ color: column.dot }}>
-          {column.icon}
-        </span>
+        <column.icon className="text-[20px]" />
         <span className="text-label-sm font-label-sm font-medium text-on-surface">{column.label}</span>
         <span className="bg-surface-container-lowest border border-outline-variant text-label-sm font-label-sm text-on-surface px-2 py-0.5 rounded-full">
           {tasks.length}
         </span>
-        <span
-          className={`material-symbols-outlined text-[20px] text-on-surface-variant ms-auto transition-transform duration-200 ${
+        <ChevronDown
+          className={`text-[20px] text-on-surface-variant ms-auto transition-transform duration-200 ${
             isCollapsed ? '' : 'rotate-180'
           }`}
-        >
-          expand_more
-        </span>
+        />
       </button>
 
       {!isCollapsed && (
@@ -88,7 +85,7 @@ export const KanbanColumn = ({
             onClick={() => onAddTask(column.key)}
             className="w-full py-3 rounded-lg border border-outline-variant text-label-sm font-label-sm text-on-surface-variant mt-2 bg-transparent hover:bg-surface-container-low transition-colors"
           >
-            <span className="material-symbols-outlined text-[18px] me-1">add</span>
+            <Plus className="text-[18px] me-1" />
             Ajouter
           </button>
         </div>

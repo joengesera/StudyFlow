@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -156,7 +157,7 @@ export default function TasksPage() {
           </p>
         </div>
         <button onClick={() => createTask({ title: 'Nouvelle tâche', status: 'PENDING', priority: 'MEDIUM' })} className="btn btn-primary">
-          <span className="material-symbols-outlined text-[18px]">add</span> Nouvelle tâche
+          <Plus className="text-[18px]" /> Nouvelle tâche
         </button>
       </div>
 

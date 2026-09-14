@@ -1,5 +1,7 @@
 ﻿import { differenceInDays, format, isToday, isTomorrow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Circle, PlayCircle, CheckCircle, XCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { TaskStatus } from '../../types';
 
 export type Column = TaskStatus;
@@ -7,17 +9,17 @@ export type Column = TaskStatus;
 export interface TaskColumnDef {
   key: Column;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   dot: string;
   border: string;
   bg: string;
 }
 
 export const columns: TaskColumnDef[] = [
-  { key: 'PENDING', label: 'à faire', icon: 'radio_button_unchecked', dot: 'var(--color-status-todo)', border: 'border-status-todo/40', bg: 'bg-status-todo/[0.04]' },
-  { key: 'IN_PROGRESS', label: 'En cours', icon: 'play_circle', dot: 'var(--color-status-progress)', border: 'border-status-progress/40', bg: 'bg-status-progress/[0.04]' },
-  { key: 'COMPLETED', label: 'Terminées', icon: 'check_circle', dot: 'var(--color-status-done)', border: 'border-status-done/40', bg: 'bg-status-done/[0.04]' },
-  { key: 'CANCELED', label: 'AnnulÃ©es', icon: 'cancel', dot: 'var(--color-outline)', border: 'border-outline-variant', bg: 'bg-surface-container-low' },
+  { key: 'PENDING', label: 'à faire', icon: Circle, dot: 'var(--color-status-todo)', border: 'border-status-todo/40', bg: 'bg-status-todo/[0.04]' },
+  { key: 'IN_PROGRESS', label: 'En cours', icon: PlayCircle, dot: 'var(--color-status-progress)', border: 'border-status-progress/40', bg: 'bg-status-progress/[0.04]' },
+  { key: 'COMPLETED', label: 'Terminées', icon: CheckCircle, dot: 'var(--color-status-done)', border: 'border-status-done/40', bg: 'bg-status-done/[0.04]' },
+  { key: 'CANCELED', label: 'Annulées', icon: XCircle, dot: 'var(--color-outline)', border: 'border-outline-variant', bg: 'bg-surface-container-low' },
 ];
 
 export const priorityColor: Record<string, string> = {

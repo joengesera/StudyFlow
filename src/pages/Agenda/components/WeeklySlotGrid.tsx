@@ -1,3 +1,4 @@
+import { MapPin } from 'lucide-react';
 import { Fragment } from 'react';
 import { addDays, format, isSameDay, isToday, parseISO, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -90,7 +91,7 @@ export function WeeklySlotGrid({
                         </div>
                         {event.location && (
                           <div className="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-0.5 mt-0.5 truncate">
-                            <span className="material-symbols-outlined text-[12px] shrink-0">location_on</span>
+                            <MapPin className="text-[12px] shrink-0" />
                             {event.location}
                           </div>
                         )}

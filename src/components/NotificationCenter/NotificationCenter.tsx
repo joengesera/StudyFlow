@@ -1,13 +1,15 @@
+import { Clock, Calendar, AlertTriangle, TrendingUp, Bell, BellOff } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '../../stores/notificationStore';
 import type { AppNotification, NotificationKind } from '../../stores/notificationStore';
 
-const kindMeta: Record<NotificationKind, { icon: string; color: string }> = {
-  LATE_TASK: { icon: 'schedule', color: 'text-error' },
-  EXAM_REMINDER: { icon: 'event', color: 'text-primary' },
-  HIGH_RISK: { icon: 'warning', color: 'text-tertiary' },
-  WEEKLY_SUMMARY: { icon: 'insights', color: 'text-primary' },
+const kindMeta: Record<NotificationKind, { icon: LucideIcon; color: string }> = {
+  LATE_TASK: { icon: Clock, color: 'text-error' },
+  EXAM_REMINDER: { icon: Calendar, color: 'text-primary' },
+  HIGH_RISK: { icon: AlertTriangle, color: 'text-tertiary' },
+  WEEKLY_SUMMARY: { icon: TrendingUp, color: 'text-primary' },
 };
 
 const relativeTime = (timestamp: number) => {
@@ -31,7 +33,7 @@ const NotificationRow = ({ notification, onSelect }: {
       onClick={() => onSelect(notification)}
       className={`w-full text-left px-4 py-3 flex gap-3 items-start transition-colors hover:bg-surface-container-low border-b border-outline-variant last:border-b-0 ${notification.read ? 'opacity-60' : ''}`}
     >
-      <span className={`material-symbols-outlined text-[20px] mt-0.5 shrink-0 ${meta.color}`}>{meta.icon}</span>
+      <meta.icon className={`text-[20px] mt-0.5 shrink-0 ${meta.color}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className="text-body-md font-body-md font-medium text-on-surface truncate">
@@ -83,13 +85,7 @@ export function NotificationCenter() {
         aria-expanded={open}
         className="relative text-on-surface-variant dark:text-outline hover:text-primary dark:hover:text-primary-fixed-dim transition-colors p-2 rounded-full hover:bg-surface-container-low"
       >
-        <span
-          className="material-symbols-outlined"
-          data-icon="notifications"
-          style={{ fontVariationSettings: unreadCount > 0 ? "'FILL' 1" : "'FILL' 0" }}
-        >
-          notifications
-        </span>
+        <Bell />
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-error text-on-error text-[10px] font-semibold flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -130,7 +126,7 @@ export function NotificationCenter() {
           <div className="max-h-[60vh] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="px-6 py-10 flex flex-col items-center gap-3 text-center">
-                <span className="material-symbols-outlined text-[32px] text-outline">notifications_off</span>
+                <BellOff className="text-[32px] text-outline" />
                 <p className="text-body-md font-body-md text-on-surface-variant">Aucune notification</p>
                 <p className="text-label-sm font-label-sm text-outline">
                   Les retards, examens proches et cours à risque apparaîtront ici.

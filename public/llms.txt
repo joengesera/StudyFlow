@@ -1,0 +1,16 @@
+# StudyFlow — Documentation pour agents IA
+
+> **Avertissement :** Cette application est en cours de développement (*under development*) et sujette à modification (*subject to change*).
+
+StudyFlow est une application de planification étudiante (PWA) pour le suivi des cours, tâches, travaux et du risque académique. Elle fonctionne hors ligne avec synchronisation différée.
+
+## Liens utiles
+
+- [Accueil / Connexion](/)
+- [Tableau de bord](/dashboard)
+- [Cours](/courses)
+- [Planning](/agenda)
+- [Tâches](/tasks)
+- [Travaux](/works)
+- [Analyse de risque](/risk)
+- [Profil](/profile)

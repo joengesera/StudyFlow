@@ -1,10 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="StudyFlow : planification de cours, tâches, travaux et suivi du risque académique pour étudiants." />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/pwa-192x192.png" />
     <title>StudyFlow</title>
+    <style>html{background:#ffffff}html.dark{background:#212121}</style>
+    <script>
+      // Applique le thème avant le premier rendu (anti-flash) : suit le
+      // navigateur en mode "system", sinon le choix stocké. Miroir de useTheme.
+      try {
+        var stored = localStorage.getItem('studyflow-theme-mode') || 'system';
+        if (stored === 'lofi') stored = 'light';
+        if (stored === 'night') stored = 'dark';
+        var resolved = stored === 'system'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : stored;
+        if (resolved === 'dark') document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', resolved);
+        document.documentElement.style.colorScheme = resolved;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
