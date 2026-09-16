@@ -8,8 +8,8 @@ interface TaskModalProps {
   task: Task;
   events: Event[];
   onClose: () => void;
-  onUpdate: (id: string, payload: Partial<Task>) => void;
-  onDelete: (id: string) => void;
+  onUpdate?: (id: string, payload: Partial<Task>) => void;
+  onDelete?: (id: string) => void;
   /** Présent → mode création : le bouton "Créer" appelle onCreate au lieu de onUpdate. */
   onCreate?: (payload: Partial<Task>) => void;
 }
@@ -62,7 +62,7 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete, onCreate 
     if (onCreate) {
       onCreate(payload);
     } else {
-      onUpdate(task.id, payload);
+      onUpdate?.(task.id, payload);
     }
     onClose();
   };
@@ -161,7 +161,7 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete, onCreate 
 
         <div className="flex flex-col sm:flex-row gap-3 justify-end pt-2 border-t border-outline-variant">
           {!isCreating && (
-            <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); }}} className="btn btn-error w-full sm:w-auto">
+            <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete?.(task.id); onClose(); }}} className="btn btn-error w-full sm:w-auto">
               <Trash2 className="text-[18px]" /> Supprimer
             </button>
           )}
