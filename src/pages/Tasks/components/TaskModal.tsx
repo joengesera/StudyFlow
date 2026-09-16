@@ -10,6 +10,8 @@ interface TaskModalProps {
   onClose: () => void;
   onUpdate: (id: string, payload: Partial<Task>) => void;
   onDelete: (id: string) => void;
+  /** Présent → mode création : le bouton "Créer" appelle onCreate au lieu de onUpdate. */
+  onCreate?: (payload: Partial<Task>) => void;
 }
 
 const fieldClassName = 'input input-bordered w-full h-12 text-base';
@@ -22,7 +24,8 @@ const toLocalDateTimeInput = (value?: string | null) => {
 };
 const getLocalDatePart = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskModalProps) => {
+export const TaskModal = ({ task, events, onClose, onUpdate, onDelete, onCreate }: TaskModalProps) => {
+  const isCreating = Boolean(onCreate);
   const [title, setTitle] = useState(task.title);
   const [priority, setPriority] = useState(task.priority);
   const [status, setStatus] = useState(task.status);
@@ -48,14 +51,19 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
   };
 
   const handleSave = () => {
-    onUpdate(task.id, {
+    const payload = {
       title,
       priority,
       status,
       eventId: eventId || null,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       completedAt: status === 'COMPLETED' ? (task.status === 'COMPLETED' ? task.completedAt : new Date().toISOString()) : null,
-    });
+    };
+    if (onCreate) {
+      onCreate(payload);
+    } else {
+      onUpdate(task.id, payload);
+    }
     onClose();
   };
 
@@ -69,11 +77,11 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm modal-backdrop">
-      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl modal-panel" role="dialog" aria-modal="true" aria-label="Modifier la tâche">
+      <div className="bg-surface-container-lowest w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl modal-panel" role="dialog" aria-modal="true" aria-label={isCreating ? 'Créer une tâche' : 'Modifier la tâche'}>
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-label-caps font-label-caps text-on-surface-variant mb-1">Édition rapide</p>
-            <h2 className="text-headline-md font-headline-md text-on-surface">Modifier la tâche</h2>
+            <h2 className="text-headline-md font-headline-md text-on-surface">{isCreating ? 'Nouvelle tâche' : 'Modifier la tâche'}</h2>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant hover:text-on-surface transition-colors" aria-label="Fermer">
             <X className="text-[22px]" />
@@ -152,13 +160,15 @@ export const TaskModal = ({ task, events, onClose, onUpdate, onDelete }: TaskMod
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-end pt-2 border-t border-outline-variant">
-          <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); }}} className="btn btn-error w-full sm:w-auto">
-            <Trash2 className="text-[18px]" /> Supprimer
-          </button>
+          {!isCreating && (
+            <button onClick={() => { if (confirm('Supprimer cette tâche ?')) { onDelete(task.id); onClose(); }}} className="btn btn-error w-full sm:w-auto">
+              <Trash2 className="text-[18px]" /> Supprimer
+            </button>
+          )}
           <div className="flex gap-2 w-full sm:w-auto">
             <button onClick={onClose} className="btn btn-outlined flex-1">Annuler</button>
             <button onClick={handleSave} className="btn btn-primary flex-1">
-              <Save className="text-[18px]" /> Enregistrer
+              <Save className="text-[18px]" /> {isCreating ? 'Créer' : 'Enregistrer'}
             </button>
           </div>
         </div>

@@ -34,6 +34,8 @@ export default function TasksPage() {
   const [pomodoroTask, setPomodoroTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createStatus, setCreateStatus] = useState<Column>('PENDING');
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
   const [now, setNow] = useState(() => Date.now());
   const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({
@@ -88,6 +90,34 @@ export default function TasksPage() {
       .sort((a, b) => a.position - b.position);
 
   const activeDragTask = activeId ? tasks.find((t) => t.id === activeId) : null;
+
+  // Ouverture directe de l'éditeur en mode création — le statut est pré-rempli
+  // depuis la colonne d'origine, la tâche n'est créée qu'à la sauvegarde.
+  const openCreateEditor = (status: Column) => {
+    setCreateStatus(status);
+    setShowCreateModal(true);
+  };
+
+  const creatingTask = (status: Column): Task => ({
+    id: '',
+    title: '',
+    description: null,
+    status,
+    priority: 'MEDIUM',
+    dueDate: null,
+    completedAt: null,
+    courseId: null,
+    eventId: null,
+    durationMinutes: null,
+    timeSpentMinutes: 0,
+    position: Date.now(),
+    startedAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 0,
+    syncStatus: 'PENDING',
+    isDeleted: false,
+  });
 
   // Entrée en mode focus : single-WIP strict (auto-revert des autres
   // tâches IN_PROGRESS) puis bascule IN_PROGRESS et navigation.
@@ -156,7 +186,7 @@ export default function TasksPage() {
             {totalCount} tâches • {urgentCount} urgentes
           </p>
         </div>
-        <button onClick={() => createTask({ title: 'Nouvelle tâche', status: 'PENDING', priority: 'MEDIUM' })} className="btn btn-primary">
+        <button onClick={() => openCreateEditor('PENDING')} className="btn btn-primary">
           <Plus className="text-[18px]" /> Nouvelle tâche
         </button>
       </div>
@@ -188,7 +218,7 @@ export default function TasksPage() {
                 onStartFocus={startFocus}
                 onDelete={(id) => deleteTask(id)}
                 selectedTaskId={selectedTask?.id ?? pomodoroTask?.id ?? null}
-                onAddTask={(status) => createTask({ title: 'Nouvelle tâche', status, priority: 'MEDIUM' })}
+                onAddTask={(status) => openCreateEditor(status)}
                 isCollapsed={!!collapsedColumns[col.key]}
                 onToggle={() => toggleColumn(col.key)}
               />
@@ -217,6 +247,15 @@ export default function TasksPage() {
           onClose={() => { setShowModal(false); setSelectedTask(null); }}
           onUpdate={(id, payload) => updateTask({ id, payload })}
           onDelete={(id) => deleteTask(id)}
+        />
+      )}
+
+      {showCreateModal && (
+        <TaskModal
+          task={creatingTask(createStatus)}
+          events={editableEvents}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={(payload) => createTask(payload)}
         />
       )}
     </div>
