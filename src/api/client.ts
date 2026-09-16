@@ -1,5 +1,5 @@
 import { useAuthStore } from '../stores/authStore';
-import { useSyncStore } from '../stores/syncStore';
+import { useSyncStore, persistSyncNow } from '../stores/syncStore';
 import { getDeviceId, extractEntityFromUrl, methodToSyncType } from '../utils/deviceId';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -91,10 +91,6 @@ const buildUrl = (
 
 const NETWORK_ERROR_MESSAGE = 'Network Error';
 const NETWORK_ERROR_CODE = 'ERR_NETWORK';
-
-const isNetworkFailure = (error: unknown): boolean =>
-  error instanceof Error &&
-  (error.message === NETWORK_ERROR_MESSAGE || (error as { code?: string }).code === NETWORK_ERROR_CODE);
 
 const asNetworkError = (config: ApiRequestConfig & { method: string; url: string }): ApiClientError =>
   new ApiClientError(NETWORK_ERROR_MESSAGE, {
@@ -219,51 +215,17 @@ const requestBackgroundSync = () => {
   }
 };
 
-// Seul un échec réseau (ou l'état hors ligne) déclenche la mise en file ;
-// un rejet du serveur (4xx/5xx) reste une erreur classique.
-const handleOffline = (
-  error: unknown,
-  config: ApiRequestConfig & { method: string; url: string },
-): Promise<ResponseBody<unknown>> | null => {
-  const isOfflineCondition = isNetworkFailure(error) || !navigator.onLine;
+// ─── WRITE-AHEAD ───
+// Philosophie offline-first : une mutation syncable est TOUJOURS enregistrée
+// (file de synchronisation persistée en IndexedDB) AVANT tout envoi réseau.
+// Succès serveur → on retire l'action de la file. Échec réseau → l'action
+// reste en file (drainée plus tard) et on renvoie un faux succès pour que
+// l'optimistic UI déjà appliquée ne soit pas cassée. Rejet 4xx/5xx → on
+// jette l'enregistrement provisoire et on propage l'erreur au hook.
 
-  if (!isOfflineCondition) return null;
-
-  // Requête interne de synchronisation (background) : on rejette pour
-  // éviter de l'ajouter à nouveau dans la file.
-  if (config._isSync) return Promise.reject(asNetworkError(config));
-
-  if (isSyncableMutation(config.method, config.url)) {
-    const payload = config.data ? (config.data as Record<string, unknown>) : undefined;
-    // Identité cohérente pour toute la vie de la mutation :
-    // id fourni par le hook (créations optimistes) > id extrait de l'URL
-    // (update/delete) > uuid fraîchement généré.
-    const identity =
-      (typeof payload?.id === 'string' ? payload.id : undefined)
-      ?? extractRemoteIdFromUrl(config.url)
-      ?? crypto.randomUUID();
-
-    const syncPayload = {
-      type: methodToSyncType(config.method),
-      entity: extractEntityFromUrl(config.url),
-      // localId est aussi transmis DANS data : le backend le stocke dans
-      // la colonne dédiée (Task/Event/Grade/Work) pour le remap
-      // offline→online multi-appareils.
-      data: { ...payload, id: identity, localId: identity },
-      deviceId: getDeviceId(),
-      localId: identity,
-    };
-
-    // On push la mutation en file d'attente (format backend)
-    useSyncStore.getState().enqueueAction(syncPayload);
-    requestBackgroundSync();
-
-    // Fausse réponse de succès pour éviter que l'UI plante et permettre l'Optimistic UI
-    return Promise.resolve({ data: { success: true, offline: true, _temporaryId: identity }, status: 200 });
-  }
-
-  return Promise.reject(asNetworkError(config));
-};
+// Fausse réponse de succès pour les mutations enregistrées hors-ligne.
+const offlineSuccess = <T,>(identity?: string): Promise<ResponseBody<T>> =>
+  Promise.resolve({ data: { success: true, offline: true, _temporaryId: identity } as T, status: 200 });
 
 const request = async <T = unknown>(
   method: string,
@@ -272,13 +234,60 @@ const request = async <T = unknown>(
 ): Promise<ResponseBody<T>> => {
   const tokens = useAuthStore.getState().tokens;
   const fullUrl = buildUrl(url, config.params);
+  const isSyncable = !config._isSync && isSyncableMutation(method, url);
 
+  // ─── ENREGISTREMENT PRÉALABLE (write-ahead) ───
+  let record: { id: string | null; localOnly: boolean } | undefined;
+  let syncPayloadData: Record<string, unknown> | undefined;
+  let identity: string | undefined;
+  const recordType = methodToSyncType(method);
+
+  if (isSyncable) {
+    const payload = (config.data ?? {}) as Record<string, unknown>;
+    identity =
+      (typeof payload.id === 'string' ? payload.id : undefined)
+      ?? extractRemoteIdFromUrl(url)
+      ?? crypto.randomUUID();
+
+    syncPayloadData = { ...payload, id: identity, localId: identity };
+    record = useSyncStore.getState().enqueueAction({
+      type: methodToSyncType(method),
+      entity: extractEntityFromUrl(url),
+      // localId est aussi transmis DANS data : le backend le stocke dans la
+      // colonne dédiée (Task/Event/Grade/Work) pour le remap
+      // offline→online multi-appareils.
+      data: syncPayloadData,
+      deviceId: getDeviceId(),
+      localId: identity,
+    });
+
+    // Entité jamais créée côté serveur (CREATE en attente) : l'appel direct
+    // ne peut pas aboutir — le drain de sync créera l'entité fusionnée.
+    if (record.localOnly) {
+      requestBackgroundSync();
+      return offlineSuccess<T>(identity);
+    }
+
+    // Durabilité : file écrite en IndexedDB AVANT d'interroger le serveur.
+    await persistSyncNow().catch(() => undefined);
+
+    // Hors-ligne connu → pas la peine d'attendre le timeout réseau.
+    if (!navigator.onLine) {
+      requestBackgroundSync();
+      return offlineSuccess<T>(identity);
+    }
+  }
+
+  // ─── ENVOI RÉSEAU ───
   let response: Response;
   try {
     response = await doFetch(fullUrl, method, config, tokens?.accessToken);
-  } catch (error) {
-    const offlineResult = handleOffline(error, { ...config, method, url });
-    if (offlineResult) return offlineResult as Promise<ResponseBody<T>>;
+  } catch {
+    // Échec réseau : l'action est déjà en file (durable) → faux succès.
+    if (record) {
+      requestBackgroundSync();
+      return offlineSuccess<T>(identity);
+    }
     throw asNetworkError({ ...config, method, url });
   }
 
@@ -298,7 +307,9 @@ const request = async <T = unknown>(
   const body = await parseBody(response);
 
   if (!response.ok) {
-    // → Retourne une erreur côté serveur (le false 401 non-récupéré inclus).
+    // Rejet serveur : on retire l'enregistrement provisoire (l'UI affichera
+    // l'erreur via onError du hook).
+    if (record?.id) useSyncStore.getState().removeAction(record.id);
     throw new ApiClientError(`Request failed with status code ${response.status}`, {
       config: { ...config, method, url },
       response: {
@@ -306,6 +317,44 @@ const request = async <T = unknown>(
         data: normalizeErrorPayload(body) as ApiErrorData,
       },
     });
+  }
+
+  // ─── SUCCÈS ───
+  // On retire l'action de la file UNIQUEMENT si rien n'a été fusionné dedans
+  // pendant l'attente réseau (sinon le drain appliquera l'état fusionné).
+  if (record?.id) {
+    const sentData = JSON.stringify(syncPayloadData);
+    const current = useSyncStore.getState().queue.find((a) => a.id === record?.id);
+
+    if (!current) {
+      // Action déjà drainée (SW/autre onglet) : rien à faire.
+    } else if (JSON.stringify(current.data) === sentData) {
+      // Aucune fusion : la mutation est partie via l'appel direct → file clean.
+      useSyncStore.getState().removeAction(record.id);
+    } else if (recordType === 'CREATE' && current.type === 'CREATE') {
+      // Le CREATE a réussi en direct mais un update a été fusionné pendant
+      // l'attente : on transforme l'action en UPDATE ciblant l'id serveur,
+      // pour éviter qu'un drain ultérieur ne recrée une entité en double.
+      const created = unwrapApiData<{ id?: unknown }>(body);
+      const serverId = typeof created?.id === 'string' ? created.id : undefined;
+      if (serverId) {
+        const delta: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(current.data)) {
+          if (syncPayloadData?.[key] !== value) delta[key] = value;
+        }
+        useSyncStore.getState().removeAction(current.id);
+        useSyncStore.getState().enqueueAction({
+          type: 'UPDATE',
+          entity: current.entity,
+          data: { ...delta, id: serverId, localId: serverId },
+          deviceId: getDeviceId(),
+          localId: serverId,
+        });
+        await persistSyncNow().catch(() => undefined);
+      }
+    }
+    // Pour un UPDATE fusionné dans une action en attente : on laisse la file
+    // intacte — le drain appliquera l'état fusionné (idempotent, pas de doublon).
   }
 
   return { data: body as T, status: response.status };

@@ -30,7 +30,10 @@ interface SyncState {
   isReady: boolean;
   lastPulledAt: string | null;
 
-  enqueueAction: (action: Omit<SyncAction, 'id' | 'timestamp' | 'attempts'>) => void;
+  enqueueAction: (action: Omit<SyncAction, 'id' | 'timestamp' | 'attempts'>) => {
+    id: string | null;
+    localOnly: boolean;
+  };
   removeAction: (id: string) => void;
   bumpAttempts: (id: string) => number;
   markFailed: (id: string, message: string) => void;
@@ -74,7 +77,10 @@ export const useSyncStore = create<SyncState>()(
       // même entité — UPDATE écrase le précédent / fusionne dans le CREATE,
       // DELETE suivant un CREATE non synchronisé annule tout (l'entité
       // n'existe pas encore côté serveur).
-      enqueueAction: (action) =>
+      enqueueAction: (action) => {
+        let outId: string | null = null;
+        let localOnly = false;
+
         set((state) => {
           const incoming: SyncAction = {
             ...action,
@@ -89,8 +95,13 @@ export const useSyncStore = create<SyncState>()(
           if (incoming.type === 'DELETE') {
             const hadCreate = state.queue.some((a) => sameTarget(a) && a.type === 'CREATE');
             const remaining = state.queue.filter((a) => !sameTarget(a));
-            // Entité jamais créée côté serveur → inutile de pousser le DELETE.
-            if (hadCreate) return { queue: remaining };
+            if (hadCreate) {
+              // Entité jamais créée côté serveur → inutile de pousser le DELETE.
+              localOnly = true;
+              outId = null;
+              return { queue: remaining };
+            }
+            outId = incoming.id;
             return { queue: [...remaining, incoming] };
           }
 
@@ -99,6 +110,9 @@ export const useSyncStore = create<SyncState>()(
             const idxCreate = queue.findIndex((a) => sameTarget(a) && a.type === 'CREATE');
             if (idxCreate >= 0) {
               const created = queue[idxCreate];
+              // L'entité n'existe que localement : fusion dans le CREATE, pas d'appel direct.
+              localOnly = true;
+              outId = created.id;
               queue[idxCreate] = {
                 ...created,
                 data: { ...created.data, ...incoming.data },
@@ -109,6 +123,7 @@ export const useSyncStore = create<SyncState>()(
             const idxUpdate = queue.findIndex((a) => sameTarget(a) && a.type === 'UPDATE');
             if (idxUpdate >= 0) {
               const prev = queue[idxUpdate];
+              outId = prev.id;
               queue[idxUpdate] = {
                 ...prev,
                 data: { ...prev.data, ...incoming.data },
@@ -118,8 +133,12 @@ export const useSyncStore = create<SyncState>()(
             }
           }
 
+          outId = incoming.id;
           return { queue: [...state.queue, incoming] };
-        }),
+        });
+
+        return { id: outId, localOnly };
+      },
 
       removeAction: (id) =>
         set((state) => ({
@@ -201,6 +220,22 @@ export const useSyncStore = create<SyncState>()(
     },
   ),
 );
+
+// Forcer la persistance immédiate de la file dans IndexedDB — utilisé en
+// write-ahead pour garantir la durabilité AVANT d'envoyer la requête réseau.
+export const persistSyncNow = async (): Promise<void> => {
+  await indexedDbStorage.setItem(
+    'sync-storage',
+    JSON.stringify({
+      state: {
+        queue: useSyncStore.getState().queue,
+        failedActions: useSyncStore.getState().failedActions,
+        lastPulledAt: useSyncStore.getState().lastPulledAt,
+      },
+      version: 0,
+    }),
+  );
+};
 
 export const getActiveSyncScope = () => activeSyncScope;
 

@@ -68,7 +68,26 @@ export const useUpdateCourse = () => {
     return useMutation({
         mutationFn: ({ id, payload }: { id: string; payload: Partial<Course> }) =>
             coursesAPI.update(id, payload),
-        onSuccess: (_data, { id }) => {
+
+        onMutate: async ({ id, payload }) => {
+            await queryClient.cancelQueries({ queryKey: courseKeys.all });
+            const previous = queryClient.getQueryData<Course[]>(courseKeys.all);
+
+            queryClient.setQueryData<Course[]>(courseKeys.all, (old) =>
+                old?.map((c) => c.id === id ? { ...c, ...payload } : c) ?? []
+            );
+
+            return { previous };
+        },
+
+        onError: (_err, _vars, context) => {
+            if (context?.previous) {
+                queryClient.setQueryData(courseKeys.all, context.previous);
+            }
+        },
+
+        onSettled: (updated, _error, { id }) => {
+            if (isOfflineMutationResult(updated)) return;
             queryClient.invalidateQueries({ queryKey: courseKeys.all });
             queryClient.invalidateQueries({ queryKey: courseKeys.one(id) });
         },
@@ -83,7 +102,8 @@ export const useDeleteCourse = () => {
             removeEntityFromCaches(queryClient, 'Course', id);
             return coursesAPI.delete(id);
         },
-        onSuccess: () => {
+        onSettled: (result) => {
+            if (isOfflineMutationResult(result)) return;
             queryClient.invalidateQueries({ queryKey: courseKeys.all });
         },
     });

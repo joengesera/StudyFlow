@@ -105,7 +105,10 @@ export const useUpdateTask = () => {
             }
         },
 
-        onSettled: () => {
+        // Mutation gérée hors ligne → pas d'invalidation : le cache optimiste
+        // reste tel quel et le moteur de sync le réconciliera au retour en ligne.
+        onSettled: (result) => {
+            if (isOfflineMutationResult(result)) return;
             queryClient.invalidateQueries({ queryKey: taskKeys.all });
             queryClient.invalidateQueries({ queryKey: taskKeys.board });
         },
@@ -120,7 +123,8 @@ export const useDeleteTask = () => {
             removeEntityFromCaches(queryClient, 'Task', id);
             return tasksApi.delete(id);
         },
-        onSettled: () => {
+        onSettled: (result) => {
+            if (isOfflineMutationResult(result)) return;
             queryClient.invalidateQueries({ queryKey: taskKeys.all });
             queryClient.invalidateQueries({ queryKey: taskKeys.board });
         },

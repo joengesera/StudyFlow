@@ -18,8 +18,9 @@ export const eventsApi = {
         return unwrapApiData(data);
     },
 
-    delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/events/${id}`);
+    delete: async (id: string): Promise<unknown> => {
+        const { data } = await apiClient.delete(`/events/${id}`);
+        return unwrapApiData(data);
     },
 
 };

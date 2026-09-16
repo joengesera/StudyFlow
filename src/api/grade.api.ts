@@ -20,8 +20,9 @@ export const gradesApi = {
         return unwrapApiData(data);
     },
 
-    delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/grades/${id}`);
+    delete: async (id: string): Promise<unknown> => {
+        const { data } = await apiClient.delete(`/grades/${id}`);
+        return unwrapApiData(data);
     },
 
     getCourseAverage: async (courseId: string): Promise<{ average: number }> => {

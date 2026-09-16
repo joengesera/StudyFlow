@@ -18,7 +18,8 @@ export const worksAPI = {
         const { data } = await apiClient.patch(`/works/${id}`, payload);
         return unwrapApiData(data);
     },
-    delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/works/${id}`);
+    delete: async (id: string): Promise<unknown> => {
+        const { data } = await apiClient.delete(`/works/${id}`);
+        return unwrapApiData(data);
     },
 };

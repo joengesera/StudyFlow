@@ -80,7 +80,8 @@ export const useUpdateEvent = () => {
             }
         },
 
-        onSettled: () => {
+        onSettled: (result) => {
+            if (isOfflineMutationResult(result)) return;
             queryClient.invalidateQueries({ queryKey: eventKeys.all });
         },
     });
@@ -95,7 +96,8 @@ export const useDeleteEvent = () => {
             return eventsApi.delete(id);
         },
 
-        onSettled: () => {
+        onSettled: (result) => {
+            if (isOfflineMutationResult(result)) return;
             queryClient.invalidateQueries({ queryKey: eventKeys.all });
         },
     });

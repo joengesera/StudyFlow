@@ -53,9 +53,8 @@ export const useCreateGrade = () => {
             return gradesApi.create({ ...payload, id: localId });
         },
         onSuccess: (created, variables) => {
-            if (!isOfflineMutationResult(created)) {
-                queryClient.invalidateQueries({ queryKey: gradeKeys.all });
-            }
+            if (isOfflineMutationResult(created)) return;
+            queryClient.invalidateQueries({ queryKey: gradeKeys.all });
             if (variables.courseId) {
                 queryClient.invalidateQueries({
                     queryKey: gradeKeys.byCourse(variables.courseId),
@@ -74,7 +73,26 @@ export const useUpdateGrade = () => {
     return useMutation({
         mutationFn: ({ id, payload }: { id: string; payload: Partial<Grade> }) =>
             gradesApi.update(id, payload),
-        onSuccess: () => {
+
+        onMutate: async ({ id, payload }) => {
+            await queryClient.cancelQueries({ queryKey: gradeKeys.all });
+            const previous = queryClient.getQueryData<Grade[]>(gradeKeys.all);
+
+            queryClient.setQueryData<Grade[]>(gradeKeys.all, (old) =>
+                old?.map((g) => g.id === id ? { ...g, ...payload } : g) ?? []
+            );
+
+            return { previous };
+        },
+
+        onError: (_err, _vars, context) => {
+            if (context?.previous) {
+                queryClient.setQueryData(gradeKeys.all, context.previous);
+            }
+        },
+
+        onSettled: (updated) => {
+            if (isOfflineMutationResult(updated)) return;
             queryClient.invalidateQueries({ queryKey: gradeKeys.all });
         },
     });
@@ -88,7 +106,8 @@ export const useDeleteGrade = () => {
             removeEntityFromCaches(queryClient, 'Grade', id);
             return gradesApi.delete(id);
         },
-        onSuccess: () => {
+        onSettled: (result) => {
+            if (isOfflineMutationResult(result)) return;
             queryClient.invalidateQueries({ queryKey: gradeKeys.all });
         },
     });

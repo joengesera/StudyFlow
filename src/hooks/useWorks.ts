@@ -54,7 +54,26 @@ export const useUpdateWork = () => {
     return useMutation({
         mutationFn: ({ id, payload }: { id: string; payload: Partial<Work> }) =>
             worksAPI.update(id, payload),
-        onSuccess: () => {
+
+        onMutate: async ({ id, payload }) => {
+            await queryClient.cancelQueries({ queryKey: workKeys.all });
+            const previous = queryClient.getQueryData<Work[]>(workKeys.all);
+
+            queryClient.setQueryData<Work[]>(workKeys.all, (old) =>
+                old?.map((w) => w.id === id ? { ...w, ...payload } : w) ?? []
+            );
+
+            return { previous };
+        },
+
+        onError: (_err, _vars, context) => {
+            if (context?.previous) {
+                queryClient.setQueryData(workKeys.all, context.previous);
+            }
+        },
+
+        onSettled: (updated) => {
+            if (isOfflineMutationResult(updated)) return;
             queryClient.invalidateQueries({ queryKey: workKeys.all });
         },
     });
@@ -67,7 +86,8 @@ export const useDeleteWork = () => {
             removeEntityFromCaches(queryClient, 'Work', id);
             return worksAPI.delete(id);
         },
-        onSuccess: () => {
+        onSettled: (result) => {
+            if (isOfflineMutationResult(result)) return;
             queryClient.invalidateQueries({ queryKey: workKeys.all });
         },
     });

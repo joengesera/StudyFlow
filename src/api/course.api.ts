@@ -30,8 +30,9 @@ export const coursesAPI = {
         return unwrapApiData(data);
     },
 
-    delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/courses/${id}`);
+    delete: async (id: string): Promise<unknown> => {
+        const { data } = await apiClient.delete(`/courses/${id}`);
+        return unwrapApiData(data);
     },
 
     getWorkTypes: async (id: string): Promise<CourseWorkType[]> => {

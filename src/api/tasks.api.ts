@@ -23,8 +23,9 @@ export const tasksApi = {
         return unwrapApiData(data);
     },
 
-    delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/tasks/${id}`);
+    delete: async (id: string): Promise<unknown> => {
+        const { data } = await apiClient.delete(`/tasks/${id}`);
+        return unwrapApiData(data);
     },
 
 };
