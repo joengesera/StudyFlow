@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Menu, Sparkles, LayoutDashboard, GraduationCap, Calendar, CheckSquare, ClipboardList, BarChart3, Settings, CircleUser, LogOut } from 'lucide-react';
+import { Menu, Sparkles, LayoutDashboard, GraduationCap, Calendar, CalendarDays, CheckSquare, ClipboardList, BarChart3, Settings, CircleUser, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSyncStore } from '../stores/syncStore';
 import { useNetworkSync } from '../hooks/useNetworkSync';
@@ -30,6 +30,7 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
   { to: '/courses', icon: GraduationCap, label: 'Cours' },
   { to: '/agenda', icon: Calendar, label: 'Planning' },
+  { to: '/events', icon: CalendarDays, label: 'Événements' },
   { to: '/tasks', icon: CheckSquare, label: 'Tâches' },
   { to: '/works', icon: ClipboardList, label: 'Travaux' },
   { to: '/risk', icon: BarChart3, label: 'Analyse de risque' },
@@ -67,7 +68,7 @@ export default function AppLayout() {
 
   const currentPath = location.pathname;
   const getActivePath = () => {
-    const matched = Object.keys({ '/dashboard': 1, '/courses': 1, '/agenda': 1, '/tasks': 1, '/works': 1, '/risk': 1, '/profile': 1, '/settings': 1 })
+    const matched = Object.keys({ '/dashboard': 1, '/courses': 1, '/agenda': 1, '/events': 1, '/tasks': 1, '/works': 1, '/risk': 1, '/profile': 1, '/settings': 1 })
       .find(k => currentPath.startsWith(k));
     return matched || '/dashboard';
   };
@@ -231,6 +232,7 @@ function getPageTitle(path: string): string {
     '/dashboard': 'Tableau de bord',
     '/courses': 'Mes cours',
     '/agenda': 'Planning',
+    '/events': 'Événements',
     '/tasks': 'Tâches',
     '/works': 'Travaux',
     '/risk': 'Analyse de risque',

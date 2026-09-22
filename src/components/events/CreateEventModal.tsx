@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { addDays, addMinutes, addMonths, addWeeks, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarDays, Clock, MapPin, Repeat2, Save, X } from 'lucide-react';
-import type { Event } from '../../../types';
-import { eventTypeBadge, eventTypeLabel, type AgendaCourse } from '../agendaShared';
+import type { Event } from '../../types';
+import { eventTypeBadge, eventTypeLabel, type EventCourse } from '../../lib/eventMeta';
 
 interface CreateEventModalProps {
   defaultDate: Date;
-  courses: AgendaCourse[];
+  courses: EventCourse[];
   onClose: () => void;
   onCreate: (payloads: Partial<Event>[]) => void;
   isLoading: boolean;

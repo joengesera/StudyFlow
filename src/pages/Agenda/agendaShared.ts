@@ -7,38 +7,13 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns';
-import type { Course, Event } from '../../types';
+import type { Event } from '../../types';
+import { eventTypeBadge, eventTypeLabel, type EventCourse } from '../../lib/eventMeta';
 
-export type AgendaCourse = Pick<Course, 'id' | 'name' | 'color'>;
+export { eventTypeBadge, eventTypeLabel };
+
+export type AgendaCourse = EventCourse;
 export type AgendaViewMode = 'month' | 'week' | 'day';
-
-export const eventTypeBadge: Record<string, string> = {
-  CLASS: 'bg-primary/10 text-primary',
-  EXAM: 'bg-error/10 text-error',
-  EXAMEN: 'bg-error/10 text-error',
-  INTERRO: 'bg-tertiary/10 text-tertiary',
-  TP: 'bg-tertiary/10 text-tertiary',
-  STUDY: 'bg-tertiary/10 text-tertiary',
-  QUIZ: 'bg-tertiary/10 text-tertiary',
-  ASSIGNMENT: 'bg-primary/10 text-primary',
-  MEETING: 'bg-surface-container-highest text-on-surface-variant',
-  PERSONAL: 'bg-surface-container-highest text-on-surface-variant',
-  AUTRE: 'bg-surface-container-highest text-on-surface-variant',
-};
-
-export const eventTypeLabel: Record<string, string> = {
-  CLASS: 'Cours',
-  EXAM: 'Examen',
-  EXAMEN: 'Examen',
-  INTERRO: 'Interro',
-  TP: 'TP',
-  STUDY: 'Étude',
-  QUIZ: 'Quiz',
-  ASSIGNMENT: 'Devoir',
-  MEETING: 'Réunion',
-  PERSONAL: 'Personnel',
-  AUTRE: 'Autre',
-};
 
 export const weekPlannerDays = 6;
 export const weekPlannerHours = Array.from({ length: 12 }, (_, index) => index + 8);

@@ -2,8 +2,8 @@ import { Trash2, FileText, MapPin, FileEdit, Clock, X, Save } from 'lucide-react
 import { useEffect, useState, type FormEvent } from 'react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { Event } from '../../../types';
-import { eventTypeBadge, eventTypeLabel } from '../agendaShared';
+import type { Event } from '../../types';
+import { eventTypeBadge, eventTypeLabel } from '../../lib/eventMeta';
 
 interface EventModalProps {
   event: Event;

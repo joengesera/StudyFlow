@@ -5,10 +5,10 @@ import { useCourses } from '../../hooks/useCourses';
 import type { Event } from '../../types';
 import { AgendaHeader } from './components/AgendaHeader';
 import { CalendarGrid } from './components/CalendarGrid';
-import { CreateEventModal } from './components/CreateEventModal';
+import { CreateEventModal } from '../../components/events/CreateEventModal';
 import { CourseFilterBar } from './components/CourseFilterBar';
 import { DayTimelineView } from './components/DayTimelineView';
-import { EventModal } from './components/EventModal';
+import { EventModal } from '../../components/events/EventModal';
 import { SelectedDayEventsList } from './components/SelectedDayEventsList';
 import { WeeklyPlanner } from './components/WeeklyPlanner';
 import {

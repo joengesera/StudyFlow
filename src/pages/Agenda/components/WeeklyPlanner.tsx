@@ -14,6 +14,86 @@ import { WeeklySlotGrid } from './WeeklySlotGrid';
 
 const HOUR_HEIGHT = 100;
 const GUTTER_WIDTH = 60;
+const MIN_EVENT_HEIGHT = 32;
+
+interface PlannedEvent {
+  event: Event;
+  top: number;
+  height: number;
+  leftPct: number;
+  widthPct: number;
+  visible: boolean;
+}
+
+// Place les événements qui se chevauchent dans des colonnes (lanes)
+// côte à côte au lieu de les dessiner les uns par-dessus les autres.
+function layoutDayEvents(events: Event[], gridHeight: number): PlannedEvent[] {
+  const items = events.map((event) => {
+    const start = parseISO(event.startDate);
+    const end = parseISO(event.endDate);
+    let startHour = start.getHours() + start.getMinutes() / 60;
+    let endHour = end.getHours() + end.getMinutes() / 60;
+    if (endHour <= startHour) endHour = startHour + 0.5;
+
+    return { event, startHour, endHour, lane: 0, laneCount: 1 };
+  });
+
+  const sorted = [...items].sort(
+    (a, b) => a.startHour - b.startHour || a.endHour - b.endHour,
+  );
+
+  const clusters: (typeof items)[number][][] = [];
+  let currentCluster: (typeof items)[number][] = [];
+  let clusterEnd = -1;
+
+  for (const item of sorted) {
+    if (currentCluster.length > 0 && item.startHour < clusterEnd) {
+      currentCluster.push(item);
+      clusterEnd = Math.max(clusterEnd, item.endHour);
+    } else {
+      if (currentCluster.length > 0) clusters.push(currentCluster);
+      currentCluster = [item];
+      clusterEnd = item.endHour;
+    }
+  }
+  if (currentCluster.length > 0) clusters.push(currentCluster);
+
+  for (const cluster of clusters) {
+    const laneEnds: number[] = [];
+    for (const item of cluster) {
+      const freeLane = laneEnds.findIndex((end) => end <= item.startHour);
+      if (freeLane === -1) {
+        item.lane = laneEnds.length;
+        laneEnds.push(item.endHour);
+      } else {
+        item.lane = freeLane;
+        laneEnds[freeLane] = item.endHour;
+      }
+    }
+    const laneCount = laneEnds.length;
+    for (const item of cluster) item.laneCount = laneCount;
+  }
+
+  const firstHour = weekPlannerHours[0];
+
+  return items.map(({ event, startHour, endHour, lane, laneCount }) => {
+    const top = (startHour - firstHour) * HOUR_HEIGHT;
+    let height = (endHour - startHour) * HOUR_HEIGHT;
+    if (height < MIN_EVENT_HEIGHT) height = MIN_EVENT_HEIGHT;
+
+    const leftPct = (lane / laneCount) * 100;
+    const widthPct = 100 / laneCount;
+
+    return {
+      event,
+      top,
+      height,
+      leftPct,
+      widthPct,
+      visible: top > -HOUR_HEIGHT && top < gridHeight,
+    };
+  });
+}
 
 interface WeeklyPlannerProps {
   currentDate: Date;
@@ -125,50 +205,43 @@ export function WeeklyPlanner({
 
               return (
                 <div key={day.toString()} className="relative">
-                  {dayEvents.map((event) => {
-                    const start = parseISO(event.startDate);
-                    const end = parseISO(event.endDate);
-                    const startHour = start.getHours() + start.getMinutes() / 60;
-                    const endHour = end.getHours() + end.getMinutes() / 60;
+                  {layoutDayEvents(dayEvents, gridHeight)
+                    .filter((planned) => planned.visible)
+                    .map(({ event, top, height, leftPct, widthPct }) => {
+                      const start = parseISO(event.startDate);
+                      const end = parseISO(event.endDate);
+                      const color = getCourseColor(courses, event.courseId);
 
-                    const firstHour = weekPlannerHours[0];
-                    const top = (startHour - firstHour) * HOUR_HEIGHT;
-                    let height = (endHour - startHour) * HOUR_HEIGHT;
-
-                    if (height < 32) height = 32;
-
-                    if (top < -HOUR_HEIGHT || top > gridHeight) return null;
-
-                    const color = getCourseColor(courses, event.courseId);
-
-                    return (
-                      <button
-                        key={event.id}
-                        onClick={() => onSelectEvent(event)}
-                        className="absolute left-1 right-1 rounded-r-md p-2 text-left overflow-hidden cursor-pointer transition-[filter] hover:brightness-[0.97]"
-                        style={{
-                          top: `${top}px`,
-                          height: `${height}px`,
-                          backgroundColor: `${color}14`,
-                          borderLeft: `2px solid ${color}`,
-                        }}
-                        title={`${event.title} (${format(start, 'HH:mm')} – ${format(end, 'HH:mm')})`}
-                      >
-                        <div className="text-label-caps font-label-caps text-on-surface-variant mb-1 truncate">
-                          {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
-                        </div>
-                        <div className="text-label-sm font-label-sm font-medium text-on-background leading-tight line-clamp-2">
-                          {event.title}
-                        </div>
-                        {height >= 90 && event.location && (
-                          <div className="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1 mt-1 truncate">
-                            <MapPin className="text-[14px]" />
-                            {event.location}
+                      return (
+                        <button
+                          key={event.id}
+                          onClick={() => onSelectEvent(event)}
+                          className="absolute rounded-r-md p-2 text-left overflow-hidden cursor-pointer transition-[filter] hover:brightness-[0.97]"
+                          style={{
+                            top: `${top}px`,
+                            height: `${height}px`,
+                            left: `calc(${leftPct}% + 3px)`,
+                            width: `calc(${widthPct}% - 6px)`,
+                            backgroundColor: `${color}14`,
+                            borderLeft: `2px solid ${color}`,
+                          }}
+                          title={`${event.title} (${format(start, 'HH:mm')} – ${format(end, 'HH:mm')})`}
+                        >
+                          <div className="text-label-caps font-label-caps text-on-surface-variant mb-1 truncate">
+                            {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
                           </div>
-                        )}
-                      </button>
-                    );
-                  })}
+                          <div className="text-label-sm font-label-sm font-medium text-on-background leading-tight line-clamp-2">
+                            {event.title}
+                          </div>
+                          {height >= 90 && event.location && (
+                            <div className="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1 mt-1 truncate">
+                              <MapPin className="text-[14px]" />
+                              {event.location}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
 
                   {dayIsToday && currentHour >= weekPlannerHours[0] && currentHour <= weekPlannerHours[weekPlannerHours.length - 1] + 1 && (
                     <div

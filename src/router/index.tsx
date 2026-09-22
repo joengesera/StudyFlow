@@ -11,6 +11,7 @@ const ResetPasswordPage = lazy(() => import('../pages/Auth/ResetPassword'));
 const CoursesPage = lazy(() => import('../pages/Courses/CoursesPage'));
 const CourseDetailPage = lazy(() => import('../pages/Courses/CoursesDetailPage'));
 const AgendaPage = lazy(() => import('../pages/Agenda/AgendaPage'));
+const EventsPage = lazy(() => import('../pages/Events/EventsPage'));
 const TasksPage = lazy(() => import('../pages/Tasks/TaskPage'));
 const WorksPage = lazy(() => import('../pages/Works/WorksPage'));
 const RiskPage = lazy(() => import('../pages/Risk/RiskPage'));
@@ -80,6 +81,10 @@ export const router = createBrowserRouter([
                     {
                         path: '/agenda',
                         element: <Suspense fallback={<PageLoader />}><AgendaPage /></Suspense>,
+                    },
+                    {
+                        path: '/events',
+                        element: <Suspense fallback={<PageLoader />}><EventsPage /></Suspense>,
                     },
                     {
                         path: '/tasks',
