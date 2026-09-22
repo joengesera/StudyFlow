@@ -2,7 +2,17 @@ import { useAuthStore } from '../stores/authStore';
 import { useSyncStore, persistSyncNow } from '../stores/syncStore';
 import { getDeviceId, extractEntityFromUrl, methodToSyncType } from '../utils/deviceId';
 
-const BASE_URL = import.meta.env.VITE_API_URL;
+// Normalisation : le backend monte son API sous /api. On tolère un
+// VITE_API_URL sans le suffixe (ex. "https://api.example.com") en
+// l'ajoutant automatiquement — évite un build de prod cassé (404 sur
+// toutes les routes) si la variable Render est incomplète.
+const normalizeApiBase = (raw: string | undefined): string => {
+  if (!raw) return '';
+  const trimmed = raw.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
+
+const BASE_URL = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 export const unwrapApiData = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
