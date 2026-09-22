@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, CircleAlert, ArrowRight } from 'lucide-react';
 import { isApiError } from '../../api/client';
 import { useAuth } from '../../hooks/useAuth';
 import logo from '@/assets/Fichier1.svg';
@@ -97,7 +98,7 @@ export default function LoginPage() {
                   Email
                 </label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">mail</span>
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
                   <input
                     id="email"
                     name="email"
@@ -136,7 +137,7 @@ export default function LoginPage() {
                   </Link>
                 </div>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">lock</span>
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
                   <input
                     id="password"
                     name="password"
@@ -160,7 +161,7 @@ export default function LoginPage() {
                     aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     aria-pressed={showPassword}
                   >
-                    {showPassword ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
                 {passwordError && (
@@ -170,7 +171,7 @@ export default function LoginPage() {
                 )}
                 {backendError && !passwordError && (
                   <p id="backend-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
-                    <span className="material-symbols-outlined text-[16px] shrink-0">check_circle</span>
+                    <CircleAlert className="h-4 w-4 shrink-0" />
                     {backendError}
                   </p>
                 )}
@@ -190,7 +191,7 @@ export default function LoginPage() {
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     Se connecter
-                    <span className="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </span>
                 )}
               </button>

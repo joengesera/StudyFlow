@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { User, Mail, Lock, Eye, EyeOff, CircleAlert, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { isApiError } from '../../api/client';
 import logo from '@/assets/Fichier1.svg';
@@ -164,7 +165,7 @@ export default function RegisterPage() {
                     Prénom
                   </label>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">person</span>
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
                     <input
                       id="firstName"
                       name="firstName"
@@ -192,7 +193,7 @@ export default function RegisterPage() {
                     Nom
                   </label>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">person</span>
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
                     <input
                       id="lastName"
                       name="lastName"
@@ -222,7 +223,7 @@ export default function RegisterPage() {
                   Email universitaire
                 </label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">mail</span>
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
                   <input
                     id="email"
                     name="email"
@@ -251,7 +252,7 @@ export default function RegisterPage() {
                   Mot de passe
                 </label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">lock</span>
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
                   <input
                     id="password"
                     name="password"
@@ -273,7 +274,7 @@ export default function RegisterPage() {
                     aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     aria-pressed={showPassword}
                   >
-                    {showPassword ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
                 {errors.password && (
@@ -289,7 +290,7 @@ export default function RegisterPage() {
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-base-content/30" aria-hidden="true">lock</span>
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/30" aria-hidden="true" />
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
@@ -311,7 +312,7 @@ export default function RegisterPage() {
                     aria-label={showConfirmPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     aria-pressed={showConfirmPassword}
                   >
-                    {showConfirmPassword ? <span className="material-symbols-outlined text-[20px]">visibility_off</span> : <span className="material-symbols-outlined text-[20px]">visibility</span>}
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
                 {errors.confirmPassword && (
@@ -321,7 +322,7 @@ export default function RegisterPage() {
                 )}
                 {backendError && !errors.confirmPassword && (
                   <p id="backend-error" className="mt-1.5 text-xs text-error flex items-center gap-1" role="alert">
-                    <span className="material-symbols-outlined text-[16px] shrink-0">check_circle</span>
+                    <CircleAlert className="h-4 w-4 shrink-0" />
                     {backendError}
                   </p>
                 )}
@@ -341,7 +342,7 @@ export default function RegisterPage() {
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     Créer mon compte
-                    <span className="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </span>
                 )}
               </button>
