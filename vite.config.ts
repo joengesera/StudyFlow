@@ -50,6 +50,11 @@ export default defineConfig({
     )
   ],
   build: {
+    // La page est servie par le service worker (précache offline-first) :
+    // les <link rel="modulepreload"> injectés par Vite sont redondants et
+    // déclenchent les warnings Chrome "cross-world service worker resource
+    // mismatch" / "preloaded but not used". On les désactive.
+    modulePreload: false,
     rollupOptions: {
       output: {
         manualChunks: {
